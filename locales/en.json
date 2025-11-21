@@ -1,0 +1,459 @@
+{
+  "app": {
+    "name": "Ethiopian Recipes",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "search": "Search",
+      "permissionRequired": "Permission Required"
+
+  },
+  "home": {
+    "title": "Ethiopian Recipes",
+    "searchPlaceholder": "Search recipes...",
+    "featured": "Featured Recipe",
+    "popular": "Popular Recipes",
+    "categories": "Categories",
+    "noRecipes": "No recipes found",
+    "loadingRecipes": "Loading delicious recipes...",
+    "pullToRefresh": "Pull to refresh",
+    "viewAll": "View All",
+    "recipesCount": "recipes",
+    "featuredCounter": "of"
+  },
+  "categories": {
+    "all": "All",
+    "breakfast": "Breakfast",
+    "lunch": "Lunch",
+    "dinner": "Dinner",
+    "dessert": "Dessert",
+    "drinks": "Drinks",
+    "vegetarian": "Vegetarian",
+    "meat": "Meat"
+  },
+  "recipe": {
+    "title": "Title",
+    "description": "Description",
+    "ingredients": "Ingredients",
+    "steps": "Preparation Steps",
+    "cookingTime": "Cooking Time",
+    "servings": "Servings",
+    "difficulty": "Difficulty",
+    "category": "Category",
+    "minutes": "min",
+    "servingsUnit": "servings",
+    "featured": "Featured"
+  },
+  "errors": {
+    "noRecipes": "No recipes found",
+    "adjustSearch": "Try adjusting your search terms",
+    "noCategoryRecipes": "No recipes available in this category",
+    "downloadFailed": "Could not save recipe image locally.",
+    "noVideo": "No video link",
+    "noVideoLink": "This recipe has no YouTube link."
+  },
+   "auth": {
+    "loginRequired": "Login Required"
+  },
+  "favorites": {
+    "saved": "Recipe saved for offline use!",
+    "removed": "Recipe removed from favourites.",
+    "loginRequired": "Please log in to save favourites.",
+    "storagePermission": "Please allow storage access to save recipe images offline."
+  },
+  "ratings": {
+    "yourRating": "Your Rating",
+    "average": "Average",
+    "total": "ratings",
+    "loginToRate": "You must log in to rate.",
+    "thankYou": "Thank you!",
+    "ratingSaved": "Your rating has been saved."
+  },
+  "comments": {
+    "title": "Comments",
+    "addPlaceholder": "Add a comment...",
+    "noComments": "No comments yet. Be the first!",
+    "deleteConfirm": "Are you sure you want to delete this comment?",
+    "loginToComment": "You must log in to comment."
+  },
+  "explore": {
+    "title": "Explore Recipes",
+    "subtitle": "Discover {{count}}+ amazing dishes",
+    "searchPlaceholder": "Search recipes, ingredients, categories...",
+    "quickFilters": "Quick Filters",
+    "quick": "Quick",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+    "recipesFound": "recipes found",
+    "for": "for",
+    "in": "in",
+    "loadingRecipes": "Exploring amazing recipes...",
+    "untitledRecipe": "Untitled Recipe",
+    "noDescription": "No description available",
+    "noRecipesFound": "No recipes found",
+    "noResultsForSearch": "No results for \"{{query}}\". Try different keywords.",
+    "tryDifferentFilter": "Try selecting a different filter or category.",
+    "showAllRecipes": "Show All Recipes",
+    "difficultyGuide": "Difficulty Guide"
+  },
+  "tabs": {
+    "home": "Home",
+    "explore": "Explore",
+    "saved": "Saved",
+    "profile": "Profile",
+    "moderate": "Moderate",
+    "admin": "Admin"
+  },
+  "moderator": {
+    "title": "Moderator Dashboard",
+    "pendingRecipes": "recipes pending review",
+    "loading": "Loading pending recipes...",
+    "byAuthor": "By",
+    "submitted": "Submitted",
+    "recently": "Recently",
+    "approve": "Approve",
+    "reject": {
+      "title": "Reject Recipe",
+      "button": "Reject",
+      "confirmMessage": "Are you sure you want to reject this recipe? The author will be notified."
+    },
+    "success": {
+      "title": "Success",
+      "approved": "Recipe approved successfully! The author has been notified.",
+      "rejected": "Recipe rejected and deleted. The author has been notified."
+    },
+    "errors": {
+      "title": "Error",
+      "loadFailed": "Error",
+      "loadFailedMessage": "Failed to load pending recipes: ",
+      "approveFailed": "Failed to approve recipe: ",
+      "rejectFailed": "Failed to reject recipe: "
+    },
+    "emptyState": {
+      "title": "All Caught Up! 🎉",
+      "message": "No pending recipes to review"
+    }
+  },
+  
+
+"admin": {
+    "title": "Admin Dashboard",
+    "subtitle": "Manage your recipe platform",
+    "tabs": {
+      "overview": "Overview",
+      "users": "Users",
+      "recipes": "Recipes",
+      "analytics": "Analytics"
+    },
+    "overview": {
+      "stats": {
+        "totalUsers": "Total Users",
+        "totalRecipes": "Total Recipes",
+        "pending": "Pending",
+        "approved": "Approved"
+      },
+      "quickActions": "Quick Actions",
+      "recentActivity": "Recent Activity",
+      "noActivity": "No recent activity",
+      "actions": {
+        "manageUsers": "Manage Users",
+        "manageUsersDesc": "View and manage all users",
+        "manageRecipes": "Manage Recipes",
+        "manageRecipesDesc": "Approve and manage recipes",
+        "viewAnalytics": "View Analytics",
+        "viewAnalyticsDesc": "Detailed platform analytics",
+        "sendNotification": "Send Notification",
+        "sendNotificationDesc": "Send push notifications"
+      },
+      "activity": {
+        "newUser": "New User Registered",
+        "joined": "joined the platform",
+        "newRecipe": "New Recipe Submitted",
+        "recipeApproved": "Recipe Approved",
+        "wasApproved": "was approved",
+        "waitingApproval": "waiting for approval"
+      }
+    },
+    "users": {
+      "searchPlaceholder": "Search users...",
+      "recipes": "Recipes",
+      "roles": {
+        "admin": "Admin",
+        "moderator": "Moderator",
+        "user": "User"
+      },
+      "success": {
+        "title": "Success",
+        "roleUpdated": "User role updated to",
+        "userDeleted": "User deleted successfully"
+      },
+      "errors": {
+        "title": "Error",
+        "roleUpdateFailed": "Failed to update user role:",
+        "deleteFailed": "Failed to delete user:"
+      },
+      "delete": {
+        "title": "Delete User",
+        "confirmMessage": "Are you sure you want to delete",
+        "warning": "This action cannot be undone.",
+        "button": "Delete"
+      },
+      "details": {
+        "title": "User Details",
+        "name": "Name",
+        "email": "Email",
+        "role": "Role",
+        "recipesPosted": "Recipes Posted",
+        "memberSince": "Member Since"
+      },
+      "emptyState": {
+        "title": "No users found",
+        "adjustSearch": "Try adjusting your search",
+        "noUsers": "Users will appear here once they register"
+      }
+    },
+    "recipes": {
+      "searchPlaceholder": "Search recipes...",
+      "status": {
+        "approved": "Approved",
+        "pending": "Pending"
+      },
+      "by": "By",
+      "created": "Created",
+      "untitled": "Untitled Recipe",
+      "uncategorized": "Uncategorized",
+      "approve": "Approve",
+      "success": {
+        "title": "Success",
+        "approved": "Recipe approved successfully!",
+        "deleted": "Recipe deleted successfully"
+      },
+      "errors": {
+        "title": "Error",
+        "approveFailed": "Failed to approve recipe",
+        "deleteFailed": "Failed to delete recipe"
+      },
+      "delete": {
+        "title": "Delete Recipe",
+        "confirmMessage": "Are you sure you want to delete",
+        "warning": "This action cannot be undone.",
+        "button": "Delete"
+      },
+      "emptyState": {
+        "title": "No recipes found",
+        "adjustSearch": "Try adjusting your search",
+        "noRecipes": "Recipes will appear here once submitted"
+      }
+    },
+    "analytics": {
+      "userAnalytics": "User Analytics",
+      "recipeAnalytics": "Recipe Analytics",
+      "topCategories": "Top Categories",
+      "platformStats": "Platform Statistics",
+      "admins": "Admins",
+      "moderators": "Moderators",
+      "users": "Users",
+      "totalUsers": "Total Users",
+      "totalRecipes": "Total Recipes",
+      "approved": "Approved",
+      "pending": "Pending",
+      "approvalRate": "Approval Rate",
+      "recipes": "recipes",
+      "activeUsers": "Active Users",
+      "recipesPerUser": "Recipes per User",
+      "pendingRatio": "Pending Ratio",
+        "languageDistribution": "Language Distribution",
+      "bilingualRecipes": "Bilingual Recipes",
+      "amharicOnly": "Amharic Only",
+      "englishOnly": "English Only",
+      "unknownFormat": "Unknown Format",
+      "topContributors": "Top Contributors",
+      "uncategorized": "Uncategorized",
+      "noCategories": "No categories available"
+    }
+  },
+  "common": {   "ok": "OK",
+    "cancel": "Cancel",
+    "close": "Close",
+    "refresh": "Refresh",
+    "pullToRefresh": "Pull to refresh",
+    "unknown": "Unknown",
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": "minutes ago",
+      "hoursAgo": "hours ago",
+      "daysAgo": "days ago"
+    }
+  },
+   "profile": {
+    "loading": "Loading profile...",
+    "defaultName": "User",
+    "language": "Language",
+    "editProfile": "Edit Profile",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "myRecipes": "My Recipes",
+    "favorites": "Favorites",
+    "helpSupport": "Help & Support",
+    "about": "About",
+    "version": "Version",
+     "logout": {
+      "title": "Logout",
+      "confirmMessage": "Are you sure you want to logout?",
+      "button": "Logout",
+      "loggingOut": "Logging out..."
+    },
+                    
+    "errors": {
+      "title": "Error",
+      "logoutFailed": "Failed to logout. Please try again."
+    },
+    "roles": {
+      "admin": "Administrator",
+      "moderator": "Moderator",
+      "user": "User"
+    }},
+    "login": {
+    "title": "Welcome Back 👋",
+    "subtitle": "Login to your account",
+    "email": "Email",
+    "emailPlaceholder": "Enter your email",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "loginButton": "Login",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "signupLink": "Sign up",
+    "errors": {
+      "title": "Error",
+      "requiredFields": "Please enter email and password",
+      "enterEmailFirst": "Please enter your email first",
+      "invalidEmail": "Please enter a valid email address",
+      "userNotFound": "No account found with this email",
+      "wrongPassword": "Incorrect password. Please try again.",
+      "tooManyRequests": "Too many failed attempts. Please try again later.",
+      "networkError": "Network error. Please check your connection.",
+      "emailNotVerifiedTitle": "Email Not Verified",
+      "emailNotVerifiedMessage": "Please verify your email before logging in."
+    },
+    "resetPassword": {
+      "successTitle": "Password Reset",
+      "successMessage": "Check your email for reset instructions"
+    }
+  },
+   "signup": {
+    "title": "Create Account ✨",
+    "subtitle": "Join the community today",
+    "name": "Full Name",
+    "namePlaceholder": "Enter your full name",
+    "email": "Email Address",
+    "emailPlaceholder": "Enter your email",
+    "password": "Password",
+    "passwordPlaceholder": "Enter password (min. 6 characters)",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "signupButton": "Create Account",
+    "haveAccount": "Already have an account?",
+    "loginLink": "Login",
+    "termsText": "By signing up, you agree to our",
+    "termsLink": "Terms of Service",
+    "and": "and",
+    "privacyLink": "Privacy Policy",
+    "success": {
+      "verifyEmailTitle": "Verify Your Email",
+      "verifyEmailMessage": "A verification email has been sent to your email address. Please check your inbox and verify your account before logging in.",
+      "goToLogin": "Go to Login"
+    },
+    "errors": {
+      "title": "Error",
+      "requiredFields": "Please fill all fields",
+      "passwordLength": "Password must be at least 6 characters",
+      "passwordMismatch": "Passwords do not match",
+      "generic": "An error occurred during signup. Please try again.",
+      "emailInUse": "This email is already registered. Please use a different email or login.",
+      "invalidEmail": "The email address is invalid. Please check and try again.",
+      "weakPassword": "Password is too weak. Please use at least 6 characters.",
+      "permissionDenied": "Database permission denied. Please try again or contact support.",
+      "networkError": "Network error. Please check your internet connection.",
+      "operationNotAllowed": "Email/password accounts are not enabled. Please contact support."
+    }
+  },
+  "addRecipe": {
+    "title": "Create Recipe",
+    "languageSelector": {
+      "title": "I'm adding this recipe in:",
+      "english": "English",
+      "amharic": "Amharic",
+      "hint": "Don't worry about translation! We'll automatically translate it to {language}"
+    },
+    "sections": {
+      "image": "Recipe Image",
+      "basicInfo": "Basic Information",
+      "ingredients": "Ingredients",
+      "steps": "Preparation Steps",
+      "video": "Video Tutorial (Optional)"
+    },
+    "placeholders": {
+      "title": "Recipe Title",
+      "description": "Recipe Description - Optional",
+      "ingredients": "List ingredients, one per line...",
+      "steps": "Describe the preparation steps, one per line...",
+      "category": "Select Category",
+      "videoURL": "YouTube video URL"
+    },
+    "placeholdersAmharic": {
+      "title": "የምግብ ርዕስ",
+      "description": "የምግብ መግለጫ - አማራጭ",
+      "ingredients": "ፕሮግራሞችን አንድ በአንድ ዝርዝር...",
+      "steps": "የማዘጋጀት ደረጃዎችን ዝርዝር...",
+      "category": "ምድብ ምረጥ",
+      "videoURL": "የYouTube ቪዲዮ አድራሻ"
+    },
+    "uploadPhoto": "Tap to upload recipe photo",
+    "changePhoto": "Change Recipe Photo",
+    "photoRequirements": "Required • JPG, PNG",
+    "autoTranslation": {
+      "title": "Auto-Translation",
+      "description": "Your recipe will be automatically translated to {language}"
+    },
+    "submitButton": "Submit Recipe",
+    "translating": "Translating your recipe...",
+    "submitting": "Submitting your recipe...",
+    "note": "Your recipe will be available in both English and Amharic after approval",
+    "categoryModal": {
+      "title": "Select Category"
+    },
+    "success": {
+      "notificationTitle": "Recipe Submitted! 🎉",
+      "notificationMessage": "Your recipe has been submitted and automatically translated to {language}!",
+      "dialogTitle": "Success 🎉",
+      "dialogMessage": "Recipe submitted for review! It has been automatically translated to {language}."
+    },
+    "errors": {
+      "permissionTitle": "Permission Required",
+      "permissionMessage": "Sorry, we need camera roll permissions to make this work!",
+      "missingImageTitle": "Missing Image",
+      "missingImageMessage": "Please choose a recipe image first",
+      "missingTitleTitle": "Missing Title",
+      "missingTitleMessage": "Please provide recipe title",
+      "missingCategoryTitle": "Missing Category",
+      "missingCategoryMessage": "Please select a category",
+      "missingIngredientsTitle": "Missing Ingredients",
+      "missingIngredientsMessage": "Please provide ingredients",
+      "missingStepsTitle": "Missing Steps",
+      "missingStepsMessage": "Please provide preparation steps",
+      "authTitle": "Authentication Error",
+      "authMessage": "Please log in to submit a recipe",
+      "uploadTitle": "Upload Error",
+      "uploadMessage": "Something went wrong while uploading your recipe"
+    }
+  }
+ 
+
+
+}
