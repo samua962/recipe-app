@@ -1,4 +1,4 @@
-// screens/ExploreScreen.js - FIXED VERSION
+// screens/ExploreScreen.js - UPDATED WITH DARK MODE
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -21,9 +21,10 @@ import { db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-// Import multi-language hooks
+// Import multi-language hooks and theme
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedRecipes } from '../hooks/useLocalizedRecipes';
+import { useTheme } from '../contexts/ThemeContext'; // Import theme hook
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const { width, height } = Dimensions.get('window');
@@ -42,6 +43,9 @@ export default function ExploreScreen({ navigation }) {
   // Multi-language hooks
   const { locale, t } = useLanguage();
   const { getLocalizedRecipes, getLocalizedRecipe } = useLocalizedRecipes();
+  
+  // Theme hook
+  const { colors, isDarkMode, toggleTheme } = useTheme();
 
   const filters = [
     { id: 'all', name: t('categories.all'), icon: 'grid' },
@@ -233,7 +237,7 @@ export default function ExploreScreen({ navigation }) {
     
     return (
       <TouchableOpacity
-        style={styles.recipeGridCard}
+        style={[styles.recipeGridCard, { backgroundColor: colors.card }]}
         onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
         activeOpacity={0.9}
       >
@@ -251,7 +255,7 @@ export default function ExploreScreen({ navigation }) {
             {title}
           </Text>
           <View style={styles.recipeGridMeta}>
-            <View style={styles.recipeGridCategory}>
+            <View style={[styles.recipeGridCategory, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
               <Ionicons name="pricetag" size={10} color="#fff" />
               <Text style={styles.recipeGridCategoryText}>
                 {category || t('categories.all')}
@@ -279,7 +283,7 @@ export default function ExploreScreen({ navigation }) {
     
     return (
       <TouchableOpacity
-        style={styles.recipeListItem}
+        style={[styles.recipeListItem, { backgroundColor: colors.card }]}
         onPress={() => navigation.navigate('RecipeDetail', { recipe: item })}
         activeOpacity={0.9}
       >
@@ -289,20 +293,20 @@ export default function ExploreScreen({ navigation }) {
           defaultSource={require('../assets/placeholder-image.jpg')}
         />
         <View style={styles.recipeListContent}>
-          <Text style={styles.recipeListTitle} numberOfLines={2}>
+          <Text style={[styles.recipeListTitle, { color: colors.text }]} numberOfLines={2}>
             {title}
           </Text>
-          <Text style={styles.recipeListDescription} numberOfLines={2}>
+          <Text style={[styles.recipeListDescription, { color: colors.textSecondary }]} numberOfLines={2}>
             {description}
           </Text>
           <View style={styles.recipeListMeta}>
             <View style={styles.recipeListMetaItem}>
-              <Ionicons name="time-outline" size={14} color="#666" />
-              <Text style={styles.recipeListMetaText}>{item?.cookingTime || '30'} {t('recipe.minutes')}</Text>
+              <Ionicons name="time-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.recipeListMetaText, { color: colors.textSecondary }]}>{item?.cookingTime || '30'} {t('recipe.minutes')}</Text>
             </View>
             <View style={styles.recipeListMetaItem}>
-              <Ionicons name="person-outline" size={14} color="#666" />
-              <Text style={styles.recipeListMetaText}>{item?.servings || '4'} {t('recipe.servingsUnit')}</Text>
+              <Ionicons name="person-outline" size={14} color={colors.textSecondary} />
+              <Text style={[styles.recipeListMetaText, { color: colors.textSecondary }]}>{item?.servings || '4'} {t('recipe.servingsUnit')}</Text>
             </View>
             <View style={[
               styles.difficultyBadgeList,
@@ -314,12 +318,12 @@ export default function ExploreScreen({ navigation }) {
             </View>
           </View>
           <View style={styles.recipeListFooter}>
-            <Text style={styles.recipeListCategory}>
+            <Text style={[styles.recipeListCategory, { color: colors.primary }]}>
               {category || t('categories.all')}
             </Text>
             <View style={styles.ratingContainer}>
               <Ionicons name="star" size={14} color="#FFD700" />
-              <Text style={styles.ratingText}>4.5</Text>
+              <Text style={[styles.ratingText, { color: colors.textSecondary }]}>4.5</Text>
             </View>
           </View>
         </View>
@@ -331,17 +335,19 @@ export default function ExploreScreen({ navigation }) {
     <TouchableOpacity
       style={[
         styles.filterItem,
-        selectedFilter === item.id && styles.activeFilterItem,
+        { backgroundColor: colors.card, borderColor: colors.border },
+        selectedFilter === item.id && [styles.activeFilterItem, { backgroundColor: colors.primary, borderColor: colors.primary }],
       ]}
       onPress={() => setSelectedFilter(item.id)}
     >
       <Ionicons 
         name={item.icon} 
         size={18} 
-        color={selectedFilter === item.id ? "#fff" : "#666"} 
+        color={selectedFilter === item.id ? "#fff" : colors.textSecondary} 
       />
       <Text style={[
         styles.filterText,
+        { color: colors.textSecondary },
         selectedFilter === item.id && styles.activeFilterText,
       ]}>
         {item.name}
@@ -387,10 +393,10 @@ export default function ExploreScreen({ navigation }) {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.loadingContainer}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff" />
-        <ActivityIndicator size="large" color="#f37d1c" />
-        <Text style={styles.loadingText}>{t('explore.loadingRecipes')}</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>{t('explore.loadingRecipes')}</Text>
       </View>
     );
   }
@@ -411,8 +417,8 @@ export default function ExploreScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       
       {/* Animated Header */}
       <Animated.View style={[
@@ -423,7 +429,7 @@ export default function ExploreScreen({ navigation }) {
         }
       ]}>
         <LinearGradient
-          colors={['#f37d1c', '#ff9d4d']}
+          colors={[colors.primary, '#ff9d4d']}
           style={styles.headerGradient}
         >
           <View style={styles.headerContent}>
@@ -434,14 +440,25 @@ export default function ExploreScreen({ navigation }) {
               </Text>
             </View>
             <View style={styles.headerRight}>
-              {/* <LanguageSwitcher /> */}
+              {/* Dark Mode Toggle Button */}
               <TouchableOpacity 
-                style={styles.viewModeButton}
+                style={[styles.viewModeButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+                onPress={toggleTheme}
+              >
+                <Ionicons 
+                  name={isDarkMode ? "sunny" : "moon"} 
+                  size={20} 
+                  color="#fff" 
+                />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.viewModeButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
                 onPress={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
               >
                 <Ionicons 
                   name={viewMode === 'grid' ? 'list' : 'grid'} 
-                  size={24} 
+                  size={20} 
                   color="#fff" 
                 />
               </TouchableOpacity>
@@ -461,26 +478,27 @@ export default function ExploreScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#f37d1c']}
-            tintColor="#f37d1c"
+            colors={[colors.primary]}
+            tintColor={colors.primary}
             title={t('home.pullToRefresh')}
+            titleColor={colors.primary}
           />
         }
       >
         {/* Search Bar */}
         <View style={styles.searchContainer}>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={20} color="#999" />
+          <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Ionicons name="search" size={20} color={colors.textSecondary} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder={t('explore.searchPlaceholder')}
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             {searchQuery ? (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color="#999" />
+                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -488,7 +506,7 @@ export default function ExploreScreen({ navigation }) {
 
         {/* Quick Filters */}
         <View style={styles.filtersSection}>
-          <Text style={styles.sectionTitle}>{t('explore.quickFilters')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('explore.quickFilters')}</Text>
           <FlatList
             data={filters}
             horizontal
@@ -501,7 +519,7 @@ export default function ExploreScreen({ navigation }) {
 
         {/* Recipe Count */}
         <View style={styles.resultsSection}>
-          <Text style={styles.resultsText}>
+          <Text style={[styles.resultsText, { color: colors.textSecondary }]}>
             {getResultsText()}
           </Text>
         </View>
@@ -517,16 +535,16 @@ export default function ExploreScreen({ navigation }) {
           </View>
         ) : (
           <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={80} color="#ddd" />
-            <Text style={styles.emptyStateTitle}>{t('explore.noRecipesFound')}</Text>
-            <Text style={styles.emptyStateText}>
+            <Ionicons name="search-outline" size={80} color={colors.border} />
+            <Text style={[styles.emptyStateTitle, { color: colors.text }]}>{t('explore.noRecipesFound')}</Text>
+            <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
               {searchQuery 
                 ? t('explore.noResultsForSearch', { query: searchQuery })
                 : t('explore.tryDifferentFilter')
               }
             </Text>
             <TouchableOpacity 
-              style={styles.emptyStateButton}
+              style={[styles.emptyStateButton, { backgroundColor: colors.primary }]}
               onPress={() => {
                 setSearchQuery('');
                 setSelectedFilter('all');
@@ -538,13 +556,13 @@ export default function ExploreScreen({ navigation }) {
         )}
 
         {/* Difficulty Guide */}
-        <View style={styles.guideSection}>
-          <Text style={styles.sectionTitle}>{t('explore.difficultyGuide')}</Text>
+        <View style={[styles.guideSection, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('explore.difficultyGuide')}</Text>
           <View style={styles.difficultyGuide}>
             {difficultyLevels.map(level => (
               <View key={level.id} style={styles.difficultyGuideItem}>
                 <View style={[styles.difficultyDot, { backgroundColor: level.color }]} />
-                <Text style={styles.difficultyGuideText}>{level.name}</Text>
+                <Text style={[styles.difficultyGuideText, { color: colors.textSecondary }]}>{level.name}</Text>
               </View>
             ))}
           </View>
@@ -554,22 +572,18 @@ export default function ExploreScreen({ navigation }) {
   );
 }
 
-// ... styles remain the same as previous version ...
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#666",
     fontWeight: "500",
   },
   header: {
@@ -603,7 +617,6 @@ const styles = StyleSheet.create({
   },
   viewModeButton: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
   },
   searchContainer: {
@@ -614,18 +627,15 @@ const styles = StyleSheet.create({
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: "#e9ecef",
   },
   searchInput: {
     flex: 1,
     marginLeft: 8,
     fontSize: 16,
-    color: "#333",
   },
   filtersSection: {
     marginBottom: 20,
@@ -633,7 +643,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: "#333",
     marginBottom: 16,
     paddingHorizontal: 20,
   },
@@ -646,7 +655,6 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 14,
-    color: "#f37d1c",
     fontWeight: "600",
   },
   filtersContainer: {
@@ -655,22 +663,18 @@ const styles = StyleSheet.create({
   filterItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#e9ecef',
   },
   activeFilterItem: {
-    backgroundColor: '#f37d1c',
     borderColor: '#f37d1c',
   },
   filterText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#666",
     marginLeft: 6,
   },
   activeFilterText: {
@@ -693,7 +697,6 @@ const styles = StyleSheet.create({
   },
   resultsText: {
     fontSize: 14,
-    color: '#666',
     fontWeight: '500',
   },
   recipesSection: {
@@ -712,7 +715,6 @@ const styles = StyleSheet.create({
     height: 180,
     borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "#f8f9fa",
     elevation: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -752,7 +754,6 @@ const styles = StyleSheet.create({
   recipeGridCategory: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -778,7 +779,6 @@ const styles = StyleSheet.create({
   },
   recipeListItem: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 12,
     marginBottom: 12,
@@ -801,12 +801,10 @@ const styles = StyleSheet.create({
   recipeListTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   recipeListDescription: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 8,
     lineHeight: 18,
   },
@@ -822,7 +820,6 @@ const styles = StyleSheet.create({
   },
   recipeListMetaText: {
     fontSize: 12,
-    color: '#666',
     marginLeft: 4,
     fontWeight: '500',
   },
@@ -843,7 +840,6 @@ const styles = StyleSheet.create({
   },
   recipeListCategory: {
     fontSize: 12,
-    color: '#f37d1c',
     fontWeight: '600',
   },
   ratingContainer: {
@@ -852,7 +848,6 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '600',
     marginLeft: 4,
   },
@@ -865,19 +860,16 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#333',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 20,
   },
   emptyStateButton: {
-    backgroundColor: '#f37d1c',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
@@ -888,7 +880,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   guideSection: {
-    backgroundColor: '#f8f9fa',
     paddingHorizontal: 20,
     paddingVertical: 24,
     marginTop: 20,
@@ -908,7 +899,6 @@ const styles = StyleSheet.create({
   },
   difficultyGuideText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '500',
   },
 });

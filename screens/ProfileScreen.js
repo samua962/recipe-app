@@ -1,26 +1,34 @@
-// screens/ProfileScreen.js - IMPROVED WITH BETTER LOGOUT
+// screens/ProfileScreen.js - UPDATED WITH DARK MODE AND CUSTOM DIALOG
 import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
+  Modal,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext'; // Import theme hook
 import LanguageSwitcher from '../components/LanguageSwitcher';
+
+const { width, height } = Dimensions.get('window');
 
 export default function ProfileScreen({ navigation }) {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [logoutLoading, setLogoutLoading] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [dialogAnimation] = useState(new Animated.Value(0));
 
   const { locale, t } = useLanguage();
+  const { colors, isDarkMode, toggleTheme } = useTheme(); // Theme hook
 
   useEffect(() => {
     loadUserData();
@@ -42,33 +50,42 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  // IMPROVED: Enhanced logout function
-  const handleLogout = () => {
-    Alert.alert(
-      t('profile.logout.title'),
-      t('profile.logout.confirmMessage'),
-      [
-        { 
-          text: t('common.cancel'), 
-          style: 'cancel' 
-        },
-        {
-          text: t('profile.logout.button'),
-          style: 'destructive',
-          onPress: performLogout,
-        },
-      ]
-    );
+  // Show custom logout dialog
+  const showCustomLogoutDialog = () => {
+    setShowLogoutDialog(true);
+    Animated.spring(dialogAnimation, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
   };
 
-  // IMPROVED: Separate logout function with loading state
+  // Hide custom logout dialog
+  const hideCustomLogoutDialog = () => {
+    Animated.timing(dialogAnimation, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowLogoutDialog(false);
+    });
+  };
+
+  // Handle logout confirmation
+  const handleLogoutConfirm = () => {
+    hideCustomLogoutDialog();
+    performLogout();
+  };
+
+  // Separate logout function with loading state
   const performLogout = async () => {
     setLogoutLoading(true);
     try {
       await signOut(auth);
       console.log('Logout successful');
       
-      // IMPROVED: Clear navigation stack completely
+      // Clear navigation stack completely
       navigation.reset({
         index: 0,
         routes: [{ name: 'Login' }],
@@ -76,10 +93,7 @@ export default function ProfileScreen({ navigation }) {
       
     } catch (error) {
       console.error('Error signing out:', error);
-      Alert.alert(
-        t('profile.errors.title'),
-        t('profile.errors.logoutFailed')
-      );
+      // You could show an error dialog here if needed
     } finally {
       setLogoutLoading(false);
     }
@@ -107,24 +121,86 @@ export default function ProfileScreen({ navigation }) {
     return t(`profile.roles.${role}`) || role;
   };
 
+  // Custom Dialog Component
+  const LogoutDialog = () => {
+    const translateY = dialogAnimation.interpolate({
+      inputRange: [0, 1],
+      outputRange: [300, 0],
+    });
+
+    const opacity = dialogAnimation.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+    });
+
+    return (
+      <Modal
+        visible={showLogoutDialog}
+        transparent
+        animationType="none"
+        onRequestClose={hideCustomLogoutDialog}
+      >
+        <View style={styles.dialogOverlay}>
+          <Animated.View style={[styles.dialogContainer, { 
+            backgroundColor: colors.card,
+            opacity,
+            transform: [{ translateY }] 
+          }]}>
+            <View style={styles.dialogIcon}>
+              <Ionicons name="log-out-outline" size={48} color="#e74c3c" />
+            </View>
+            
+            <Text style={[styles.dialogTitle, { color: colors.text }]}>
+              {t('profile.logout.title')}
+            </Text>
+            
+            <Text style={[styles.dialogMessage, { color: colors.textSecondary }]}>
+              {t('profile.logout.confirmMessage')}
+            </Text>
+            
+            <View style={styles.dialogButtons}>
+              <TouchableOpacity 
+                style={[styles.dialogButton, styles.cancelButton, { borderColor: colors.border }]}
+                onPress={hideCustomLogoutDialog}
+              >
+                <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+                  {t('common.cancel')}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.dialogButton, styles.confirmButton]}
+                onPress={handleLogoutConfirm}
+              >
+                <Text style={styles.confirmButtonText}>
+                  {t('profile.logout.button')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  };
+
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#f37d1c" />
-        <Text style={styles.loadingText}>{t('profile.loading')}</Text>
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>{t('profile.loading')}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.avatar}>
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
           <Ionicons name="person" size={40} color="#fff" />
         </View>
-        <Text style={styles.userName}>{userData?.name || t('profile.defaultName')}</Text>
-        <Text style={styles.userEmail}>{auth.currentUser?.email}</Text>
+        <Text style={[styles.userName, { color: colors.text }]}>{userData?.name || t('profile.defaultName')}</Text>
+        <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{auth.currentUser?.email}</Text>
         
         {userData?.role && (
           <View style={[styles.roleBadge, { backgroundColor: getRoleColor(userData.role) }]}>
@@ -135,19 +211,35 @@ export default function ProfileScreen({ navigation }) {
       </View>
 
       {/* Menu Items */}
-      <View style={styles.menu}>
+      <View style={[styles.menu, { backgroundColor: colors.card }]}>
+        {/* Dark Mode Toggle */}
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={toggleTheme}
+        >
+          <Ionicons 
+            name={isDarkMode ? "sunny" : "moon"} 
+            size={24} 
+            color={colors.textSecondary} 
+          />
+          <Text style={[styles.menuText, { color: colors.text }]}>
+            {isDarkMode ? t('profile.lightMode') : t('profile.darkMode')}
+          </Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Language Switcher */}
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="language-outline" size={24} color="#666" />
-          <Text style={styles.menuText}>{t('profile.language')}</Text>
+          <Ionicons name="language-outline" size={24} color={colors.textSecondary} />
+          <Text style={[styles.menuText, { color: colors.text }]}>{t('profile.language')}</Text>
           <LanguageSwitcher />
         </TouchableOpacity>
 
         {/* Edit Profile */}
         <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="person-outline" size={24} color="#666" />
-          <Text style={styles.menuText}>{t('profile.editProfile')}</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          <Ionicons name="person-outline" size={24} color={colors.textSecondary} />
+          <Text style={[styles.menuText, { color: colors.text }]}>{t('profile.editProfile')}</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {/* Notifications */}
@@ -155,45 +247,39 @@ export default function ProfileScreen({ navigation }) {
           style={styles.menuItem}
           onPress={() => navigation.navigate('Notifications')}
         >
-          <Ionicons name="notifications-outline" size={24} color="#666" />
-          <Text style={styles.menuText}>{t('profile.notifications')}</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
+          <Ionicons name="notifications-outline" size={24} color={colors.textSecondary} />
+          <Text style={[styles.menuText, { color: colors.text }]}>{t('profile.notifications')}</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {/* Settings */}
-        <TouchableOpacity style={styles.menuItem}>
-          <Ionicons name="settings-outline" size={24} color="#666" />
-          <Text style={styles.menuText}>{t('profile.settings')}</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity>
+        {/* <TouchableOpacity style={styles.menuItem}>
+          <Ionicons name="settings-outline" size={24} color={colors.textSecondary} />
+          <Text style={[styles.menuText, { color: colors.text }]}>{t('profile.settings')}</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity> */}
 
         {/* My Recipes */}
-        {/* <TouchableOpacity 
+        <TouchableOpacity 
           style={styles.menuItem}
           onPress={() => navigation.navigate('MyRecipes')}
         >
-          <Ionicons name="restaurant-outline" size={24} color="#666" />
-          <Text style={styles.menuText}>{t('profile.myRecipes')}</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity> */}
-
-        {/* Favorites */}
-        {/* <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => navigation.navigate('Favorites')}
-        >
-          <Ionicons name="heart-outline" size={24} color="#666" />
-          <Text style={styles.menuText}>{t('profile.favorites')}</Text>
-          <Ionicons name="chevron-forward" size={20} color="#ccc" />
-        </TouchableOpacity> */}
+          <Ionicons name="restaurant-outline" size={24} color={colors.textSecondary} />
+          <Text style={[styles.menuText, { color: colors.text }]}>{t('profile.myRecipes')}</Text>
+          <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
 
         {/* Divider before logout */}
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-        {/* IMPROVED: Logout Button with Loading State */}
+        {/* Logout Button with Loading State */}
         <TouchableOpacity 
-          style={[styles.logoutButton, logoutLoading && styles.logoutButtonDisabled]}
-          onPress={handleLogout}
+          style={[
+            styles.logoutButton, 
+            { backgroundColor: colors.card, borderLeftColor: '#e74c3c' },
+            logoutLoading && styles.logoutButtonDisabled
+          ]}
+          onPress={showCustomLogoutDialog}
           disabled={logoutLoading}
         >
           {logoutLoading ? (
@@ -209,8 +295,13 @@ export default function ProfileScreen({ navigation }) {
 
       {/* App Version */}
       <View style={styles.footer}>
-        <Text style={styles.versionText}>{t('profile.version')} 1.0.0</Text>
+        <Text style={[styles.versionText, { color: colors.textSecondary }]}>
+          {t('profile.version')} 1.0.0
+        </Text>
       </View>
+
+      {/* Custom Logout Dialog */}
+      <LogoutDialog />
     </View>
   );
 }
@@ -218,26 +309,22 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
     fontWeight: '500',
   },
   header: {
-    backgroundColor: '#fff',
     alignItems: 'center',
     padding: 30,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'transparent',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -248,7 +335,6 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#f37d1c',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -261,12 +347,10 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 16,
-    color: '#666',
     marginBottom: 12,
   },
   roleBadge: {
@@ -289,7 +373,6 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   menu: {
-    backgroundColor: '#fff',
     marginTop: 16,
     marginHorizontal: 16,
     borderRadius: 12,
@@ -305,28 +388,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   menuText: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
     marginLeft: 12,
     fontWeight: '500',
   },
-  // IMPROVED: Logout specific styles
   divider: {
     height: 1,
-    backgroundColor: '#f0f0f0',
     marginVertical: 8,
   },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#fff0f0',
     borderLeftWidth: 4,
-    borderLeftColor: '#e74c3c',
   },
   logoutButtonDisabled: {
     opacity: 0.6,
@@ -345,7 +423,73 @@ const styles = StyleSheet.create({
   },
   versionText: {
     fontSize: 14,
-    color: '#999',
     fontWeight: '500',
+  },
+  // Custom Dialog Styles
+  dialogOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dialogContainer: {
+    width: '85%',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  dialogIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dialogTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  dialogMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  dialogButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  dialogButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    borderWidth: 2,
+  },
+  confirmButton: {
+    backgroundColor: '#e74c3c',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
 });

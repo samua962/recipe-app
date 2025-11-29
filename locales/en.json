@@ -137,8 +137,16 @@
     "emptyState": {
       "title": "All Caught Up! 🎉",
       "message": "No pending recipes to review"
-    }
+    },
+      "recipePreview": "Recipe Preview",
+    "viewFullRecipe": "View Full Recipe",
+    "processing": "Processing...",
+    "pullToRefresh": "Pull to refresh",
+    "refresh": "Refresh"
+  
+    
   },
+  
   
 
 "admin": {
@@ -302,6 +310,8 @@
     "helpSupport": "Help & Support",
     "about": "About",
     "version": "Version",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode",
      "logout": {
       "title": "Logout",
       "confirmMessage": "Are you sure you want to logout?",

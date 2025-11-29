@@ -1,4 +1,4 @@
-// App.js - SIMPLIFIED VERSION
+// App.js - FINAL VERSION WITH DARK MODE
 import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -7,12 +7,13 @@ import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from "./firebaseConfig";
 
-// Import Language Provider
+// Providers
 import { LanguageProvider } from "./contexts/LanguageContext";
+import { ThemeProvider } from "./contexts/ThemeContext";  // ← Our dark mode provider
 
-// Import all screens
-import IntroScreen from "./screens/IntroScreen";           
-import AppSplashScreen from "./screens/AppSplashScreen";   
+// Screens
+import IntroScreen from "./screens/IntroScreen";
+import AppSplashScreen from "./screens/AppSplashScreen";
 import LoginScreen from "./screens/LoginScreen";
 import SignupScreen from "./screens/SignupScreen";
 import HomeScreen from "./screens/HomeScreen";
@@ -21,20 +22,17 @@ import AddRecipeScreen from "./screens/AddRecipeScreen";
 import LauncherScreen from "./screens/LauncherScreen";
 import NotificationsScreen from "./screens/NotificationsScreen";
 
-// Import role-based tab navigators
+// Role-based tab navigators
 import { UserTabs, ModeratorTabs, AdminTabs } from "./navigation/RoleBasedTabs";
 
-// Navigation setup
 const Stack = createNativeStackNavigator();
 
-// Main App Component
 function MainAppContent() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [userRole, setUserRole] = useState('user');
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(null);
 
-  // Check if user has seen onboarding
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       try {
@@ -48,23 +46,17 @@ function MainAppContent() {
     checkOnboardingStatus();
   }, []);
 
-  // Firebase auth listener with role detection
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        // Get user role from Firestore
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            const role = userData.role || 'user';
-            setUserRole(role);
-          } else {
-            setUserRole('user');
+            setUserRole(userData.role || 'user');
           }
         } catch (error) {
           console.log("Error fetching user role:", error);
-          setUserRole('user');
         }
       } else {
         setUserRole('user');
@@ -75,19 +67,14 @@ function MainAppContent() {
     return unsubscribe;
   }, []);
 
-  // Get the appropriate tab navigator based on user role
   const getTabNavigator = () => {
     switch (userRole) {
-      case 'admin':
-        return AdminTabs;
-      case 'moderator':
-        return ModeratorTabs;
-      default:
-        return UserTabs;
+      case 'admin': return AdminTabs;
+      case 'moderator': return ModeratorTabs;
+      default: return UserTabs;
     }
   };
 
-  // Show launcher while loading
   if (loading || hasSeenOnboarding === null) {
     return (
       <NavigationContainer>
@@ -117,11 +104,13 @@ function MainAppContent() {
   );
 }
 
-// Wrap the main app with Language Provider
+// FINAL APP WRAPPER — Language + Theme (Dark Mode)
 export default function App() {
   return (
-    <LanguageProvider>
-      <MainAppContent />
-    </LanguageProvider>
+    <ThemeProvider>                    {/* ← Dark mode available everywhere */}
+      <LanguageProvider>
+        <MainAppContent />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }

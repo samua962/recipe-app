@@ -33,9 +33,10 @@ import {
   deleteDoc,
 } from "firebase/firestore";
 
-// Import multi-language hooks
+// Import multi-language hooks and theme
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocalizedRecipes } from "../hooks/useLocalizedRecipes";
+import { useTheme } from "../contexts/ThemeContext"; // Import theme hook
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 import {
@@ -52,9 +53,12 @@ export default function RecipeDetailScreen({ route }) {
   const user = auth.currentUser;
   const navigation = useNavigation();
   
-  // Multi-language hooks - FIXED: Properly destructure both values
-  const { currentLanguage, t } = useLanguage(); // Make sure both are destructured
+  // Multi-language hooks
+  const { currentLanguage, t } = useLanguage();
   const { getLocalizedRecipe } = useLocalizedRecipes();
+  
+  // Theme hook
+  const { colors, isDarkMode, toggleTheme } = useTheme();
   
   // Get localized recipe
   const recipe = getLocalizedRecipe(originalRecipe);
@@ -105,7 +109,7 @@ export default function RecipeDetailScreen({ route }) {
     if (!localizedText) return '';
     
     return localizedText.split('\n').map((line, index) => (
-      <Text key={index} style={styles.textLine}>
+      <Text key={index} style={[styles.textLine, { color: colors.text }]}>
         {line.trim()}
       </Text>
     ));
@@ -313,7 +317,7 @@ export default function RecipeDetailScreen({ route }) {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
       {/* Recipe Image with Gradient Overlay */}
       <View style={styles.imageContainer}>
         <Image source={getImageSource()} style={styles.image} />
@@ -331,6 +335,17 @@ export default function RecipeDetailScreen({ route }) {
             <Ionicons name="chevron-back" size={28} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerRight}>
+            {/* Dark Mode Toggle */}
+            <TouchableOpacity 
+              style={[styles.themeButton, { backgroundColor: 'rgba(0,0,0,0.3)' }]}
+              onPress={toggleTheme}
+            >
+              <Ionicons 
+                name={isDarkMode ? "sunny" : "moon"} 
+                size={22} 
+                color="#fff" 
+              />
+            </TouchableOpacity>
             <LanguageSwitcher />
             <TouchableOpacity style={styles.favButton} onPress={handleSaveFavourite}>
               <Ionicons 
@@ -344,11 +359,11 @@ export default function RecipeDetailScreen({ route }) {
       </View>
 
       {/* Recipe Content */}
-      <View style={styles.contentContainer}>
+      <View style={[styles.contentContainer, { backgroundColor: colors.background }]}>
         {/* Title and Category */}
         <View style={styles.titleSection}>
-          <Text style={styles.title}>{getLocalizedText(recipe.title)}</Text>
-          <View style={styles.categoryBadge}>
+          <Text style={[styles.title, { color: colors.text }]}>{getLocalizedText(recipe.title)}</Text>
+          <View style={[styles.categoryBadge, { backgroundColor: colors.primary }]}>
             <Text style={styles.categoryText}>{getLocalizedText(recipe.category)}</Text>
           </View>
         </View>
@@ -356,36 +371,36 @@ export default function RecipeDetailScreen({ route }) {
         {/* Recipe Meta Info */}
         <View style={styles.metaContainer}>
           {recipe.cookingTime && (
-            <View style={styles.metaItem}>
-              <Ionicons name="time-outline" size={18} color="#666" />
-              <Text style={styles.metaText}>{recipe.cookingTime} {t('recipe.minutes')}</Text>
+            <View style={[styles.metaItem, { backgroundColor: colors.card }]}>
+              <Ionicons name="time-outline" size={18} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{recipe.cookingTime} {t('recipe.minutes')}</Text>
             </View>
           )}
           {recipe.servings && (
-            <View style={styles.metaItem}>
-              <Ionicons name="people-outline" size={18} color="#666" />
-              <Text style={styles.metaText}>{recipe.servings} {t('recipe.servingsUnit')}</Text>
+            <View style={[styles.metaItem, { backgroundColor: colors.card }]}>
+              <Ionicons name="people-outline" size={18} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{recipe.servings} {t('recipe.servingsUnit')}</Text>
             </View>
           )}
           {recipe.difficulty && (
-            <View style={styles.metaItem}>
-              <Ionicons name="speedometer-outline" size={18} color="#666" />
-              <Text style={styles.metaText}>{getLocalizedText(recipe.difficulty)}</Text>
+            <View style={[styles.metaItem, { backgroundColor: colors.card }]}>
+              <Ionicons name="speedometer-outline" size={18} color={colors.textSecondary} />
+              <Text style={[styles.metaText, { color: colors.textSecondary }]}>{getLocalizedText(recipe.difficulty)}</Text>
             </View>
           )}
         </View>
 
         {/* Description */}
         {recipe.description && (
-          <View style={styles.descriptionSection}>
-            <Text style={styles.descriptionText}>{getLocalizedText(recipe.description)}</Text>
+          <View style={[styles.descriptionSection, { backgroundColor: colors.card }]}>
+            <Text style={[styles.descriptionText, { color: colors.text }]}>{getLocalizedText(recipe.description)}</Text>
           </View>
         )}
 
         {/* Rating Section */}
-        <View style={styles.ratingSection}>
+        <View style={[styles.ratingSection, { backgroundColor: colors.card }]}>
           {loadingRating ? (
-            <ActivityIndicator color="#f37d1c" />
+            <ActivityIndicator color={colors.primary} />
           ) : (
             <>
               <View style={styles.ratingRow}>
@@ -395,14 +410,14 @@ export default function RecipeDetailScreen({ route }) {
                   imageSize={26}
                   startingValue={userRating}
                   onFinishRating={handleRating}
-                  tintColor="#f8f9fa"
+                  tintColor={colors.card}
                 />
                 <View style={styles.ratingInfo}>
-                  <Text style={styles.avgRating}>{avgRating.toFixed(1)}</Text>
-                  <Text style={styles.ratingCount}>({totalRatings} {t('ratings.total')})</Text>
+                  <Text style={[styles.avgRating, { color: colors.text }]}>{avgRating.toFixed(1)}</Text>
+                  <Text style={[styles.ratingCount, { color: colors.textSecondary }]}>({totalRatings} {t('ratings.total')})</Text>
                 </View>
               </View>
-              <Text style={styles.yourRatingText}>{t('ratings.yourRating')}</Text>
+              <Text style={[styles.yourRatingText, { color: colors.textSecondary }]}>{t('ratings.yourRating')}</Text>
             </>
           )}
         </View>
@@ -410,14 +425,14 @@ export default function RecipeDetailScreen({ route }) {
         {/* Ingredients Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="restaurant-outline" size={22} color="#f37d1c" />
-            <Text style={styles.sectionTitle}>{t('recipe.ingredients')}</Text>
+            <Ionicons name="restaurant-outline" size={22} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('recipe.ingredients')}</Text>
           </View>
-          <View style={styles.ingredientsBox}>
+          <View style={[styles.ingredientsBox, { backgroundColor: colors.card }]}>
             {recipe.ingredients ? (
               formatTextWithLineBreaks(recipe.ingredients)
             ) : (
-              <Text style={styles.noDataText}>{t('recipe.noIngredients')}</Text>
+              <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('recipe.noIngredients')}</Text>
             )}
           </View>
         </View>
@@ -425,14 +440,14 @@ export default function RecipeDetailScreen({ route }) {
         {/* Preparation Steps */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="list-outline" size={22} color="#f37d1c" />
-            <Text style={styles.sectionTitle}>{t('recipe.steps')}</Text>
+            <Ionicons name="list-outline" size={22} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('recipe.steps')}</Text>
           </View>
-          <View style={styles.stepsBox}>
+          <View style={[styles.stepsBox, { backgroundColor: colors.card }]}>
             {recipe.steps ? (
               formatTextWithLineBreaks(recipe.steps)
             ) : (
-              <Text style={styles.noDataText}>{t('recipe.noSteps')}</Text>
+              <Text style={[styles.noDataText, { color: colors.textSecondary }]}>{t('recipe.noSteps')}</Text>
             )}
           </View>
         </View>
@@ -441,7 +456,7 @@ export default function RecipeDetailScreen({ route }) {
         {recipe.videoURL && (
           <TouchableOpacity onPress={openYouTube} style={styles.videoButton}>
             <LinearGradient 
-              colors={["#f37d1c", "#ff9d4d"]} 
+              colors={[colors.primary, '#ff9d4d']} 
               style={styles.videoGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -455,30 +470,30 @@ export default function RecipeDetailScreen({ route }) {
         {/* Comments Section */}
         <View style={styles.commentSection}>
           <View style={styles.sectionHeader}>
-            <Ionicons name="chatbubble-ellipses-outline" size={22} color="#f37d1c" />
-            <Text style={styles.sectionTitle}>{t('comments.title')} ({comments.length})</Text>
+            <Ionicons name="chatbubble-ellipses-outline" size={22} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('comments.title')} ({comments.length})</Text>
           </View>
 
           {loadingComments ? (
-            <ActivityIndicator color="#f37d1c" style={styles.loader} />
+            <ActivityIndicator color={colors.primary} style={styles.loader} />
           ) : comments.length === 0 ? (
             <View style={styles.noComments}>
-              <Ionicons name="chatbubble-outline" size={50} color="#ddd" />
-              <Text style={styles.noCommentsText}>{t('comments.noComments')}</Text>
+              <Ionicons name="chatbubble-outline" size={50} color={colors.border} />
+              <Text style={[styles.noCommentsText, { color: colors.textSecondary }]}>{t('comments.noComments')}</Text>
             </View>
           ) : (
             comments.map((c) => (
-              <View key={c.id} style={styles.commentBox}>
+              <View key={c.id} style={[styles.commentBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.commentHeader}>
                   <View style={styles.commentUserInfo}>
-                    <View style={styles.userAvatar}>
+                    <View style={[styles.userAvatar, { backgroundColor: colors.primary }]}>
                       <Text style={styles.avatarText}>
                         {c.username?.charAt(0)?.toUpperCase() || "U"}
                       </Text>
                     </View>
                     <View>
-                      <Text style={styles.commentUser}>{c.username || "Anonymous"}</Text>
-                      <Text style={styles.commentTime}>
+                      <Text style={[styles.commentUser, { color: colors.text }]}>{c.username || "Anonymous"}</Text>
+                      <Text style={[styles.commentTime, { color: colors.textSecondary }]}>
                         {c.timestamp?.toDate ? new Date(c.timestamp.toDate()).toLocaleDateString() : 'Unknown date'}
                       </Text>
                     </View>
@@ -488,21 +503,21 @@ export default function RecipeDetailScreen({ route }) {
                       onPress={() => handleDeleteComment(c.id)}
                       style={styles.deleteButton}
                     >
-                      <Ionicons name="trash-outline" size={18} color="#999" />
+                      <Ionicons name="trash-outline" size={18} color={colors.textSecondary} />
                     </TouchableOpacity>
                   )}
                 </View>
-                <Text style={styles.commentText}>{c.text}</Text>
+                <Text style={[styles.commentText, { color: colors.text }]}>{c.text}</Text>
               </View>
             ))
           )}
 
           {/* Add Comment */}
-          <View style={styles.commentInputContainer}>
+          <View style={[styles.commentInputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TextInput
-              style={styles.commentInput}
+              style={[styles.commentInput, { color: colors.text }]}
               placeholder={t('comments.addPlaceholder')}
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
               value={newComment}
               onChangeText={setNewComment}
               multiline
@@ -511,7 +526,7 @@ export default function RecipeDetailScreen({ route }) {
               onPress={handleAddComment}
               style={[
                 styles.sendButton,
-                { backgroundColor: newComment.trim() ? "#f37d1c" : "#ddd" }
+                { backgroundColor: newComment.trim() ? colors.primary : colors.border }
               ]}
               disabled={!newComment.trim()}
             >
@@ -523,10 +538,10 @@ export default function RecipeDetailScreen({ route }) {
     </ScrollView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
   imageContainer: {
     height: 300,
@@ -558,6 +573,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
+  themeButton: {
+    backgroundColor: "rgba(0,0,0,0.3)",
+    borderRadius: 20,
+    padding: 6,
+  },
   backButton: {
     backgroundColor: "rgba(0,0,0,0.3)",
     borderRadius: 20,
@@ -570,7 +590,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    backgroundColor: "#fff",
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     marginTop: -25,
@@ -584,12 +603,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: "bold",
-    color: "#333",
     marginBottom: 10,
     lineHeight: 34,
   },
   categoryBadge: {
-    backgroundColor: "#f37d1c",
     paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
@@ -609,31 +626,26 @@ const styles = StyleSheet.create({
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 12,
   },
   metaText: {
     fontSize: 14,
-    color: "#666",
     marginLeft: 6,
     fontWeight: "500",
   },
   descriptionSection: {
-    backgroundColor: "#f8f9fa",
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
   },
   descriptionText: {
     fontSize: 15,
-    color: "#555",
     lineHeight: 22,
     fontStyle: "italic",
   },
   ratingSection: {
-    backgroundColor: "#f8f9fa",
     borderRadius: 16,
     padding: 20,
     marginBottom: 25,
@@ -650,16 +662,13 @@ const styles = StyleSheet.create({
   avgRating: {
     fontSize: 24,
     fontWeight: "bold",
-    color: "#333",
   },
   ratingCount: {
     fontSize: 12,
-    color: "#666",
     marginTop: 2,
   },
   yourRatingText: {
     fontSize: 14,
-    color: "#666",
     textAlign: "center",
     marginTop: 8,
   },
@@ -674,28 +683,23 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#333",
     marginLeft: 8,
   },
   ingredientsBox: {
-    backgroundColor: "#f8f9fa",
     borderRadius: 12,
     padding: 16,
   },
   stepsBox: {
-    backgroundColor: "#f8f9fa",
     borderRadius: 12,
     padding: 16,
   },
   textLine: {
     fontSize: 15,
-    color: "#555",
     lineHeight: 22,
     marginBottom: 4,
   },
   noDataText: {
     fontSize: 14,
-    color: "#999",
     fontStyle: "italic",
     textAlign: "center",
   },
@@ -733,17 +737,14 @@ const styles = StyleSheet.create({
     paddingVertical: 40,
   },
   noCommentsText: {
-    color: "#999",
     fontSize: 16,
     marginTop: 10,
   },
   commentBox: {
-    backgroundColor: "#fff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#f0f0f0",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -765,7 +766,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#f37d1c",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
@@ -777,11 +777,9 @@ const styles = StyleSheet.create({
   },
   commentUser: {
     fontWeight: "bold",
-    color: "#333",
     fontSize: 14,
   },
   commentTime: {
-    color: "#999",
     fontSize: 12,
     marginTop: 2,
   },
@@ -789,25 +787,21 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   commentText: {
-    color: "#555",
     fontSize: 14,
     lineHeight: 20,
   },
   commentInputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    backgroundColor: "#fff",
     borderRadius: 25,
     paddingHorizontal: 16,
     paddingVertical: 8,
     marginTop: 15,
     borderWidth: 1,
-    borderColor: "#e0e0e0",
   },
   commentInput: {
     flex: 1,
     paddingVertical: 10,
-    color: "#000",
     fontSize: 15,
     maxHeight: 100,
   },

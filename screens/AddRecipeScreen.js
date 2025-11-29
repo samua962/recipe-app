@@ -1,4 +1,4 @@
-// screens/AddRecipeScreen.js - COMPLETE MULTI-LANGUAGE RECIPE SUBMISSION
+// screens/AddRecipeScreen.js - UPDATED WITH DARK MODE AND CUSTOM DIALOGS
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import CustomDialog from "../components/CustomDialog";
 import { NotificationService } from "../services/notificationService";
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext'; // Import theme hook
 
 const { width } = Dimensions.get("window");
 
@@ -44,7 +45,7 @@ const CATEGORIES = [
   { en: "Vegan", am: "ቬጋን" }
 ];
 
-// Comprehensive Translation Service
+// Translation Service (same as before)
 class TranslationService {
   static async translateText(text, targetLanguage) {
     if (!text || text.trim() === '') return text;
@@ -435,6 +436,7 @@ export default function AddRecipeScreen({ navigation }) {
   const [dialogIcon, setDialogIcon] = useState("alert-circle-outline");
 
   const { locale, t } = useLanguage();
+  const { colors, isDarkMode } = useTheme(); // Theme hook
 
   useEffect(() => {
     loadUserData();
@@ -467,24 +469,25 @@ export default function AddRecipeScreen({ navigation }) {
       : t('addRecipe.languageSelector.english');
 
     return (
-      <View style={styles.languageSection}>
-        <Text style={styles.sectionTitle}>{t('addRecipe.languageSelector.title')}</Text>
-        <View style={styles.languageSwitcher}>
+      <View style={[styles.languageSection, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('addRecipe.languageSelector.title')}</Text>
+        <View style={[styles.languageSwitcher, { backgroundColor: colors.background }]}>
           <TouchableOpacity
             style={[
               styles.languageTab,
-              inputLanguage === 'en' && styles.activeLanguageTab
+              inputLanguage === 'en' && [styles.activeLanguageTab, { backgroundColor: colors.card }]
             ]}
             onPress={() => setInputLanguage('en')}
           >
             <Ionicons 
               name={inputLanguage === 'en' ? "checkmark-circle" : "ellipse-outline"} 
               size={20} 
-              color={inputLanguage === 'en' ? "#f37d1c" : "#666"} 
+              color={inputLanguage === 'en' ? colors.primary : colors.textSecondary} 
             />
             <Text style={[
               styles.languageText,
-              inputLanguage === 'en' && styles.activeLanguageText
+              { color: colors.textSecondary },
+              inputLanguage === 'en' && [styles.activeLanguageText, { color: colors.primary }]
             ]}>
               {t('addRecipe.languageSelector.english')}
             </Text>
@@ -492,24 +495,25 @@ export default function AddRecipeScreen({ navigation }) {
           <TouchableOpacity
             style={[
               styles.languageTab,
-              inputLanguage === 'am' && styles.activeLanguageTab
+              inputLanguage === 'am' && [styles.activeLanguageTab, { backgroundColor: colors.card }]
             ]}
             onPress={() => setInputLanguage('am')}
           >
             <Ionicons 
               name={inputLanguage === 'am' ? "checkmark-circle" : "ellipse-outline"} 
               size={20} 
-              color={inputLanguage === 'am' ? "#f37d1c" : "#666"} 
+              color={inputLanguage === 'am' ? colors.primary : colors.textSecondary} 
             />
             <Text style={[
               styles.languageText,
-              inputLanguage === 'am' && styles.activeLanguageText
+              { color: colors.textSecondary },
+              inputLanguage === 'am' && [styles.activeLanguageText, { color: colors.primary }]
             ]}>
               {t('addRecipe.languageSelector.amharic')}
             </Text>
           </TouchableOpacity>
         </View>
-        <Text style={styles.languageHint}>
+        <Text style={[styles.languageHint, { color: colors.textSecondary }]}>
           {t('addRecipe.languageSelector.hint').replace('{language}', targetLanguageName)}
         </Text>
       </View>
@@ -734,18 +738,20 @@ export default function AddRecipeScreen({ navigation }) {
     <TouchableOpacity
       style={[
         styles.categoryItem,
-        category === (inputLanguage === 'en' ? item.en : item.am) && styles.categoryItemSelected
+        { borderBottomColor: colors.border },
+        category === (inputLanguage === 'en' ? item.en : item.am) && [styles.categoryItemSelected, { backgroundColor: isDarkMode ? 'rgba(243, 125, 28, 0.1)' : '#fef8f4' }]
       ]}
       onPress={() => handleCategorySelect(item)}
     >
       <Text style={[
         styles.categoryText,
-        category === (inputLanguage === 'en' ? item.en : item.am) && styles.categoryTextSelected
+        { color: colors.text },
+        category === (inputLanguage === 'en' ? item.en : item.am) && [styles.categoryTextSelected, { color: colors.primary }]
       ]}>
         {inputLanguage === 'en' ? item.en : item.am}
       </Text>
       {category === (inputLanguage === 'en' ? item.en : item.am) && (
-        <Ionicons name="checkmark" size={20} color="#f37d1c" />
+        <Ionicons name="checkmark" size={20} color={colors.primary} />
       )}
     </TouchableOpacity>
   );
@@ -758,26 +764,26 @@ export default function AddRecipeScreen({ navigation }) {
       : t('addRecipe.languageSelector.english');
 
     return (
-      <View style={styles.translationInfo}>
-        <Ionicons name="language" size={24} color="#f37d1c" />
+      <View style={[styles.translationInfo, { 
+        backgroundColor: isDarkMode ? 'rgba(243, 125, 28, 0.1)' : '#f0f7ff',
+        borderLeftColor: colors.primary 
+      }]}>
+        <Ionicons name="language" size={24} color={colors.primary} />
         <View style={styles.translationText}>
-          <Text style={styles.translationTitle}>{t('addRecipe.autoTranslation.title')}</Text>
-          <Text style={styles.translationDescription}>
+          <Text style={[styles.translationTitle, { color: colors.text }]}>{t('addRecipe.autoTranslation.title')}</Text>
+          <Text style={[styles.translationDescription, { color: colors.textSecondary }]}>
             {t('addRecipe.autoTranslation.description').replace('{language}', targetLanguageName)}
           </Text>
-          {/* <Text style={styles.translationNote}>
-            {t('addRecipe.autoTranslation.note')}
-          </Text> */}
         </View>
       </View>
     );
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <LinearGradient 
-        colors={["#f37d1c", "#ff9d4d"]} 
+        colors={[colors.primary, '#ff9d4d']} 
         style={styles.header}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}
@@ -803,8 +809,8 @@ export default function AddRecipeScreen({ navigation }) {
         {/* Form Container */}
         <View style={styles.formContainer}>
           {/* Image Upload Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('addRecipe.sections.image')}</Text>
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('addRecipe.sections.image')}</Text>
             
             {image ? (
               <View style={styles.imageSelectedContainer}>
@@ -824,37 +830,46 @@ export default function AddRecipeScreen({ navigation }) {
               </View>
             ) : (
               <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                <View style={styles.imagePlaceholder}>
-                  <Ionicons name="camera-outline" size={40} color="#f37d1c" />
-                  <Text style={styles.imagePlaceholderText}>{t('addRecipe.uploadPhoto')}</Text>
-                  <Text style={styles.imagePlaceholderSubtext}>{t('addRecipe.photoRequirements')}</Text>
+                <View style={[styles.imagePlaceholder, { 
+                  borderColor: colors.primary,
+                  backgroundColor: isDarkMode ? 'rgba(243, 125, 28, 0.1)' : '#fef8f4'
+                }]}>
+                  <Ionicons name="camera-outline" size={40} color={colors.primary} />
+                  <Text style={[styles.imagePlaceholderText, { color: colors.primary }]}>{t('addRecipe.uploadPhoto')}</Text>
+                  <Text style={[styles.imagePlaceholderSubtext, { color: colors.textSecondary }]}>{t('addRecipe.photoRequirements')}</Text>
                 </View>
               </TouchableOpacity>
             )}
           </View>
 
           {/* Basic Info Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('addRecipe.sections.basicInfo')}</Text>
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('addRecipe.sections.basicInfo')}</Text>
             
-            <View style={styles.inputContainer}>
-              <Ionicons name="restaurant-outline" size={20} color="#666" style={styles.inputIcon} />
+            <View style={[styles.inputContainer, { 
+              backgroundColor: colors.background, 
+              borderColor: colors.border 
+            }]}>
+              <Ionicons name="restaurant-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder={placeholders.title}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 value={title}
                 onChangeText={setTitle}
               />
             </View>
 
             {/* Description */}
-            <View style={styles.inputContainer}>
-              <Ionicons name="document-text-outline" size={20} color="#666" style={styles.inputIcon} />
+            <View style={[styles.inputContainer, { 
+              backgroundColor: colors.background, 
+              borderColor: colors.border 
+            }]}>
+              <Ionicons name="document-text-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder={placeholders.description}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 value={description}
                 onChangeText={setDescription}
               />
@@ -862,30 +877,38 @@ export default function AddRecipeScreen({ navigation }) {
 
             {/* Category Selector */}
             <TouchableOpacity 
-              style={styles.categorySelector}
+              style={[styles.categorySelector, { 
+                backgroundColor: colors.background, 
+                borderColor: colors.border 
+              }]}
               onPress={() => setShowCategoryModal(true)}
             >
               <View style={styles.categorySelectorContent}>
-                <Ionicons name="pricetags-outline" size={20} color="#666" style={styles.inputIcon} />
+                <Ionicons name="pricetags-outline" size={20} color={colors.textSecondary} style={styles.inputIcon} />
                 <View style={styles.categorySelectorText}>
-                  <Text style={category ? styles.categorySelected : styles.categoryPlaceholder}>
+                  <Text style={[
+                    category ? [styles.categorySelected, { color: colors.text }] : [styles.categoryPlaceholder, { color: colors.textSecondary }]
+                  ]}>
                     {category || placeholders.category}
                   </Text>
                 </View>
-                <Ionicons name="chevron-down" size={20} color="#666" />
+                <Ionicons name="chevron-down" size={20} color={colors.textSecondary} />
               </View>
             </TouchableOpacity>
           </View>
 
           {/* Ingredients Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('addRecipe.sections.ingredients')}</Text>
-            <View style={styles.textAreaContainer}>
-              <Ionicons name="list-outline" size={20} color="#666" style={styles.textAreaIcon} />
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('addRecipe.sections.ingredients')}</Text>
+            <View style={[styles.textAreaContainer, { 
+              backgroundColor: colors.background, 
+              borderColor: colors.border 
+            }]}>
+              <Ionicons name="list-outline" size={20} color={colors.textSecondary} style={styles.textAreaIcon} />
               <TextInput
-                style={styles.textArea}
+                style={[styles.textArea, { color: colors.text }]}
                 placeholder={placeholders.ingredients}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 multiline
                 numberOfLines={6}
                 textAlignVertical="top"
@@ -896,14 +919,17 @@ export default function AddRecipeScreen({ navigation }) {
           </View>
 
           {/* Steps Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('addRecipe.sections.steps')}</Text>
-            <View style={styles.textAreaContainer}>
-              <Ionicons name="create-outline" size={20} color="#666" style={styles.textAreaIcon} />
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('addRecipe.sections.steps')}</Text>
+            <View style={[styles.textAreaContainer, { 
+              backgroundColor: colors.background, 
+              borderColor: colors.border 
+            }]}>
+              <Ionicons name="create-outline" size={20} color={colors.textSecondary} style={styles.textAreaIcon} />
               <TextInput
-                style={styles.textArea}
+                style={[styles.textArea, { color: colors.text }]}
                 placeholder={placeholders.steps}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 multiline
                 numberOfLines={8}
                 textAlignVertical="top"
@@ -914,14 +940,17 @@ export default function AddRecipeScreen({ navigation }) {
           </View>
 
           {/* Video Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('addRecipe.sections.video')}</Text>
-            <View style={styles.inputContainer}>
-              <Ionicons name="logo-youtube" size={20} color="#666" style={styles.inputIcon} />
+          <View style={[styles.section, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('addRecipe.sections.video')}</Text>
+            <View style={[styles.inputContainer, { 
+              backgroundColor: colors.background, 
+              borderColor: colors.border 
+            }]}>
+              <Ionicons name="logo-youtube" size={20} color={colors.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text }]}
                 placeholder={placeholders.videoURL}
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.textSecondary}
                 value={videoURL}
                 onChangeText={setVideoURL}
                 autoCapitalize="none"
@@ -936,8 +965,8 @@ export default function AddRecipeScreen({ navigation }) {
           <View style={styles.submitSection}>
             {(uploading || translating) ? (
               <View style={styles.uploadingContainer}>
-                <ActivityIndicator size="large" color="#f37d1c" />
-                <Text style={styles.uploadingText}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text style={[styles.uploadingText, { color: colors.text }]}>
                   {translating ? t('addRecipe.translating') : t('addRecipe.submitting')}
                 </Text>
               </View>
@@ -951,7 +980,7 @@ export default function AddRecipeScreen({ navigation }) {
                 disabled={!image || !title || !category || !ingredients || !steps || uploading}
               >
                 <LinearGradient 
-                  colors={["#f37d1c", "#ff9d4d"]}
+                  colors={[colors.primary, '#ff9d4d']}
                   style={styles.submitGradient}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
@@ -962,7 +991,7 @@ export default function AddRecipeScreen({ navigation }) {
               </TouchableOpacity>
             )}
             
-            <Text style={styles.noteText}>
+            <Text style={[styles.noteText, { color: colors.textSecondary }]}>
               {t('addRecipe.note')}
             </Text>
           </View>
@@ -977,14 +1006,14 @@ export default function AddRecipeScreen({ navigation }) {
         onRequestClose={() => setShowCategoryModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('addRecipe.categoryModal.title')}</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('addRecipe.categoryModal.title')}</Text>
               <TouchableOpacity 
                 style={styles.modalCloseButton}
                 onPress={() => setShowCategoryModal(false)}
               >
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
             
@@ -1011,11 +1040,9 @@ export default function AddRecipeScreen({ navigation }) {
   );
 }
 
-// Styles remain exactly the same as in your original code
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
   header: {
     flexDirection: "row",
@@ -1043,7 +1070,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   languageSection: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
     margin: 20,
@@ -1056,7 +1082,6 @@ const styles = StyleSheet.create({
   },
   languageSwitcher: {
     flexDirection: "row",
-    backgroundColor: "#f8f9fa",
     borderRadius: 12,
     padding: 4,
     marginTop: 8,
@@ -1071,7 +1096,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   activeLanguageTab: {
-    backgroundColor: "#fff",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -1081,15 +1105,12 @@ const styles = StyleSheet.create({
   languageText: {
     fontSize: 16,
     fontWeight: "500",
-    color: "#666",
   },
   activeLanguageText: {
-    color: "#f37d1c",
     fontWeight: "600",
   },
   languageHint: {
     fontSize: 12,
-    color: "#666",
     marginTop: 8,
     textAlign: "center",
     fontStyle: "italic",
@@ -1098,7 +1119,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   section: {
-    backgroundColor: "#fff",
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
@@ -1111,7 +1131,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
     marginBottom: 16,
   },
   imageSelectedContainer: {
@@ -1150,32 +1169,26 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 200,
     borderWidth: 2,
-    borderColor: "#f37d1c",
     borderStyle: "dashed",
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fef8f4",
   },
   imagePlaceholderText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#f37d1c",
     marginTop: 12,
   },
   imagePlaceholderSubtext: {
     fontSize: 12,
-    color: "#999",
     marginTop: 4,
   },
   inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
     borderRadius: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: "#e9ecef",
   },
   inputIcon: {
     padding: 12,
@@ -1185,13 +1198,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingRight: 12,
     fontSize: 16,
-    color: "#333",
   },
   categorySelector: {
-    backgroundColor: "#f8f9fa",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e9ecef",
     marginBottom: 12,
   },
   categorySelectorContent: {
@@ -1206,19 +1216,15 @@ const styles = StyleSheet.create({
   },
   categoryPlaceholder: {
     fontSize: 16,
-    color: "#999",
   },
   categorySelected: {
     fontSize: 16,
-    color: "#333",
     fontWeight: "500",
   },
   textAreaContainer: {
     flexDirection: "row",
-    backgroundColor: "#f8f9fa",
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "#e9ecef",
   },
   textAreaIcon: {
     padding: 12,
@@ -1229,18 +1235,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingRight: 12,
     fontSize: 16,
-    color: "#333",
     minHeight: 120,
   },
   translationInfo: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f0f7ff",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: "#f37d1c",
   },
   translationText: {
     flex: 1,
@@ -1249,19 +1252,11 @@ const styles = StyleSheet.create({
   translationTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#333",
     marginBottom: 4,
   },
   translationDescription: {
     fontSize: 14,
-    color: "#666",
     lineHeight: 18,
-  },
-  translationNote: {
-    fontSize: 12,
-    color: "#999",
-    marginTop: 4,
-    fontStyle: "italic",
   },
   modalOverlay: {
     flex: 1,
@@ -1269,7 +1264,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: "#fff",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: "60%",
@@ -1281,12 +1275,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e9ecef",
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
   },
   modalCloseButton: {
     padding: 4,
@@ -1300,17 +1292,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
   },
   categoryItemSelected: {
-    backgroundColor: "#fef8f4",
+    borderRadius: 8,
   },
   categoryText: {
     fontSize: 16,
-    color: "#333",
   },
   categoryTextSelected: {
-    color: "#f37d1c",
     fontWeight: "600",
   },
   submitSection: {
@@ -1349,12 +1338,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   uploadingText: {
-    color: "#666",
     fontSize: 16,
     marginTop: 12,
   },
   noteText: {
-    color: "#999",
     fontSize: 14,
     textAlign: "center",
     marginTop: 8,

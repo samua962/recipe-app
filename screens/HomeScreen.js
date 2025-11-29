@@ -18,6 +18,7 @@ import { db } from "../firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocalizedRecipes } from "../hooks/useLocalizedRecipes";
+import { useTheme } from "../contexts/ThemeContext"; // Import theme hook
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -52,6 +53,9 @@ export default function HomeScreen({ navigation }) {
   // Multi-language hooks
   const { locale, t } = useLanguage();
   const { getLocalizedRecipes, getLocalizedRecipe } = useLocalizedRecipes();
+  
+  // Theme hook
+  const { colors, isDarkMode, toggleTheme } = useTheme(); // Added toggleTheme
 
   useEffect(() => {
     loadRecipes();
@@ -166,22 +170,26 @@ export default function HomeScreen({ navigation }) {
     
     return (
       <TouchableOpacity
-        style={styles.recipeCard}
+        style={[styles.recipeCard, { backgroundColor: colors.card }]}
         onPress={() => navigation.navigate("RecipeDetail", { recipe: item })}
         activeOpacity={0.9}
       >
         <Image source={getImageSource(item)} style={styles.recipeImage} />
         <View style={styles.recipeInfo}>
-          <Text style={styles.recipeTitle} numberOfLines={2}>
+          <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={2}>
             {localizedRecipe.title}
           </Text>
           <View style={styles.recipeMeta}>
-            <View style={styles.recipeCategoryBadge}>
-              <Text style={styles.recipeCategoryText}>{localizedRecipe.category}</Text>
+            <View style={[styles.recipeCategoryBadge, { backgroundColor: colors.badgeBg }]}>
+              <Text style={[styles.recipeCategoryText, { color: colors.textSecondary }]}>
+                {localizedRecipe.category}
+              </Text>
             </View>
             <View style={styles.recipeTime}>
-              <Ionicons name="time-outline" size={12} color="#666" />
-              <Text style={styles.timeText}> {localizedRecipe.cookingTime || '30'} {t('recipe.minutes')}</Text>
+              <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+              <Text style={[styles.timeText, { color: colors.textSecondary }]}>
+                {localizedRecipe.cookingTime || '30'} {t('recipe.minutes')}
+              </Text>
             </View>
           </View>
         </View>
@@ -193,22 +201,25 @@ export default function HomeScreen({ navigation }) {
     <TouchableOpacity
       style={[
         styles.categoryItem,
-        selectedCategory.key === item.key && styles.activeCategoryItem,
+        { backgroundColor: colors.card },
+        selectedCategory.key === item.key && [styles.activeCategoryItem, { backgroundColor: colors.primary }],
       ]}
       onPress={() => handleCategorySelect(item)}
     >
       <View style={[
         styles.categoryIcon,
+        { backgroundColor: isDarkMode ? 'rgba(243, 125, 28, 0.1)' : '#fff5e6' },
         selectedCategory.key === item.key && styles.activeCategoryIcon
       ]}>
         <Ionicons 
           name={getCategoryIcon(item.key)} 
           size={20} 
-          color={selectedCategory.key === item.key ? "#fff" : "#f37d1c"} 
+          color={selectedCategory.key === item.key ? "#fff" : colors.primary} 
         />
       </View>
       <Text style={[
         styles.categoryName,
+        { color: colors.textSecondary },
         selectedCategory.key === item.key && styles.activeCategoryName
       ]}>
         {t(`categories.${item.key}`)}
@@ -231,9 +242,9 @@ export default function HomeScreen({ navigation }) {
 
   if (loading && !refreshing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f37d1c" />
-        <Text style={styles.loadingText}>{t('home.loadingRecipes')}</Text>
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>{t('home.loadingRecipes')}</Text>
       </View>
     );
   }
@@ -242,7 +253,7 @@ export default function HomeScreen({ navigation }) {
   const featuredRecipe = recipes[featuredIndex] ? getLocalizedRecipe(recipes[featuredIndex]) : null;
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView 
         showsVerticalScrollIndicator={false}
         style={styles.scrollView}
@@ -250,23 +261,35 @@ export default function HomeScreen({ navigation }) {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={['#f37d1c']}
-            tintColor="#f37d1c"
+            colors={[colors.primary]}
+            tintColor={colors.primary}
             title={t('home.pullToRefresh')}
-            titleColor="#f37d1c"
+            titleColor={colors.primary}
           />
         }
       >
         {/* Header */}
         <View style={styles.header}>
-          <Ionicons name="menu-outline" size={28} color="#333"  />
-          <Text style={styles.logo}>{t('home.title')}</Text>
+          <Ionicons name="menu-outline" size={28} color={colors.text} />
+          <Text style={[styles.logo, { color: colors.primary }]}>{t('home.title')}</Text>
           <View style={styles.headerRight}>
+            {/* Dark Mode Toggle Button */}
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={toggleTheme} // Added toggleTheme here
+            >
+              <Ionicons 
+                name={isDarkMode ? "sunny" : "moon"} 
+                size={24} 
+                color={colors.text} 
+              />
+            </TouchableOpacity>
+            
             <TouchableOpacity 
               style={styles.menuItem}
               onPress={() => navigation.navigate('Notifications')}
             >
-              <Ionicons name="notifications-outline" size={24} color="#333" />
+              <Ionicons name="notifications-outline" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -275,8 +298,8 @@ export default function HomeScreen({ navigation }) {
         {featuredRecipe && (
           <View style={styles.featuredSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t('home.featured')}</Text>
-              <Text style={styles.featuredCounter}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.featured')}</Text>
+              <Text style={[styles.featuredCounter, { color: colors.textSecondary }]}>
                 {featuredIndex + 1} {t('home.featuredCounter')} {recipes.length}
               </Text>
             </View>
@@ -301,7 +324,7 @@ export default function HomeScreen({ navigation }) {
                   style={styles.featuredImage}
                 />
                 <View style={styles.featuredOverlay}>
-                  <View style={styles.featuredBadge}>
+                  <View style={[styles.featuredBadge, { backgroundColor: colors.primary }]}>
                     <Text style={styles.featuredBadgeText}>{t('recipe.featured')}</Text>
                   </View>
                   <Text style={styles.featuredTitle}>{featuredRecipe.title}</Text>
@@ -329,7 +352,8 @@ export default function HomeScreen({ navigation }) {
                   key={index}
                   style={[
                     styles.indicator,
-                    featuredIndex === index && styles.activeIndicator,
+                    { backgroundColor: colors.border },
+                    featuredIndex === index && [styles.activeIndicator, { backgroundColor: colors.primary }],
                   ]}
                 />
               ))}
@@ -340,8 +364,8 @@ export default function HomeScreen({ navigation }) {
         {/* Categories Section */}
         <View style={styles.categoriesSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>{t('home.categories')}</Text>
-            <Text style={styles.recipesCount}>{recipes.length} {t('home.recipesCount')}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.categories')}</Text>
+            <Text style={[styles.recipesCount, { color: colors.primary }]}>{recipes.length} {t('home.recipesCount')}</Text>
           </View>
           <FlatList
             data={categories}
@@ -356,11 +380,11 @@ export default function HomeScreen({ navigation }) {
         {/* Popular Recipes Section */}
         <View style={styles.recipesSection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {selectedCategory.value === "All" ? t('home.popular') : t(`categories.${selectedCategory.key}`)}
             </Text>
             <TouchableOpacity>
-              <Text style={styles.seeAllText}>{t('home.viewAll')}</Text>
+              <Text style={[styles.seeAllText, { color: colors.primary }]}>{t('home.viewAll')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -376,9 +400,9 @@ export default function HomeScreen({ navigation }) {
             />
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="fast-food-outline" size={64} color="#ddd" />
-              <Text style={styles.emptyStateTitle}>{t('errors.noRecipes')}</Text>
-              <Text style={styles.emptyStateText}>
+              <Ionicons name="fast-food-outline" size={64} color={colors.border} />
+              <Text style={[styles.emptyStateTitle, { color: colors.text }]}>{t('errors.noRecipes')}</Text>
+              <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
                 {t('errors.noCategoryRecipes')}
               </Text>
             </View>
@@ -388,7 +412,7 @@ export default function HomeScreen({ navigation }) {
 
       {/* Floating Add Button */}
       <TouchableOpacity
-        style={styles.addButton}
+        style={[styles.addButton, { backgroundColor: colors.primary }]}
         onPress={() => navigation.navigate("AddRecipe")}
         activeOpacity={0.9}
       >
@@ -403,7 +427,6 @@ export default function HomeScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f9fa",
   },
   scrollView: {
     flex: 1,
@@ -423,7 +446,6 @@ const styles = StyleSheet.create({
   logo: {
     fontSize: 22,
     fontWeight: "700",
-    color: "#f37d1c",
   },
   menuItem: {
     padding: 4,
@@ -441,21 +463,17 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 22,
     fontWeight: "bold",
-    color: "#333",
   },
   featuredCounter: {
     fontSize: 14,
-    color: "#666",
     fontWeight: "500",
   },
   recipesCount: {
     fontSize: 14,
-    color: "#f37d1c",
     fontWeight: "600",
   },
   seeAllText: {
     fontSize: 14,
-    color: "#f37d1c",
     fontWeight: "600",
   },
   featuredCard: {
@@ -482,7 +500,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   featuredBadge: {
-    backgroundColor: "#f37d1c",
     alignSelf: "flex-start",
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -528,12 +545,10 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#ddd",
     marginHorizontal: 3,
     marginVertical: 2,
   },
   activeIndicator: {
-    backgroundColor: "#f37d1c",
     width: 12,
   },
   categoriesSection: {
@@ -547,7 +562,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     padding: 12,
     borderRadius: 15,
-    backgroundColor: "#fff",
     minWidth: 80,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -556,14 +570,12 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   activeCategoryItem: {
-    backgroundColor: "#f37d1c",
     transform: [{ scale: 1.05 }],
   },
   categoryIcon: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: "#fff5e6",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -574,7 +586,6 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 12,
     fontWeight: "600",
-    color: "#666",
     textAlign: "center",
   },
   activeCategoryName: {
@@ -593,7 +604,6 @@ const styles = StyleSheet.create({
   },
   recipeCard: {
     width: (screenWidth - 40) / 2,
-    backgroundColor: "#fff",
     borderRadius: 16,
     overflow: "hidden",
     marginBottom: 15,
@@ -613,7 +623,6 @@ const styles = StyleSheet.create({
   recipeTitle: {
     fontSize: 14,
     fontWeight: "bold",
-    color: "#333",
     marginBottom: 8,
     lineHeight: 18,
   },
@@ -623,14 +632,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   recipeCategoryBadge: {
-    backgroundColor: "#f0f0f0",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   recipeCategoryText: {
     fontSize: 10,
-    color: "#666",
     fontWeight: "600",
   },
   recipeTime: {
@@ -639,7 +646,6 @@ const styles = StyleSheet.create({
   },
   timeText: {
     fontSize: 10,
-    color: "#666",
   },
   emptyState: {
     alignItems: "center",
@@ -649,13 +655,11 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#333",
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: "#666",
     textAlign: "center",
     lineHeight: 20,
   },
@@ -663,7 +667,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 30,
     right: 20,
-    backgroundColor: "#f37d1c",
     borderRadius: 30,
     width: 60,
     height: 60,
@@ -685,12 +688,10 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#f8f9fa",
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: "#666",
     fontWeight: "500",
   },
 });

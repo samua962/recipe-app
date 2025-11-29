@@ -14,7 +14,7 @@
   "home": {
     "title": "ኢትዮጵያዊ ምግቦች",
     "searchPlaceholder": "ምግቦችን ፈልግ...",
-    "featured": "የተመረጠ ምግብ",
+    "featured": "የተመረጠ",
     "popular": "ታዋቂ ምግቦች",
     "categories": "ምድቦች",
     "noRecipes": "ምንም ምግብ አልተገኘም",
@@ -37,11 +37,11 @@
   "recipe": {
     "title": "ርዕስ",
     "description": "መግለጫ",
-    "ingredients": "ፕሮግራሞች",
+    "ingredients": "አስፈላጊ ነገሮች",
     "steps": "የማዘጋጀት ደረጃዎች",
     "cookingTime": "የማብሰያ ጊዜ",
     "servings": "ቁጥር",
-    "difficulty": "ችግር",
+    "difficulty": "ክብደት",
     "category": "ምድብ",
     "minutes": "ደቂቃ",
     "servingsUnit": "ሰዎች",
@@ -51,24 +51,24 @@
     "noRecipes": "ምንም ምግብ አልተገኘም",
     "adjustSearch": "የፍለጋ ቃላትዎን ይለውጡ",
     "noCategoryRecipes": "በዚህ ምድብ ውስጥ ምግብ የለም",
-       "downloadFailed": "የምግብ ምስል በአካባቢ ሊሰቅል አልቻለም።",
+       "downloadFailed": "የምግብ ምስል ማውረድ አልቻለም።",
     "noVideo": "የቪዲዮ አገናኝ የለም",
     "noVideoLink": "ለዚህ ምግብ YouTube አገናኝ የለም።"
   },
   "auth": {
-    "loginRequired": "Login ያስፈልጋል"
+    "loginRequired": "መመዝገብ ያስፈልጋል"
   },
   "favorites": {
-    "saved": "ምግቡ ለመስመር ውጭ አገልግሎት ተሰቅሏል!",
-    "removed": "ምግቡ ከተለዩ ምግቦች ላይ ተሰርዟል።",
-    "loginRequired": "ለመቀመጥ መ-login አለብዎት።",
-    "storagePermission": "የምግብ ምስሎችን ለመስመር ውጭ ለማስቀመጥ የማከማቻ መዳረሻ ይፍቀዱ።"
+    "saved": "ምግቡ ለ በዋላ አገልግሎት ተከምቷል!",
+    "removed": "ምግቡ ከተከመቱ ምግቦች ላይ ተሰርዟል።",
+    "loginRequired": "ለማስከመት መመዝገብ ማረግ አለብዎት።",
+    "storagePermission": "የምግብ ምስሎችን ከመስመር ውጭ ለማስቀመጥ የማከማቻ መዳረሻ ይፍቀዱ።"
   },
   "ratings": {
     "yourRating": "የእርስዎ ደረጃ",
     "average": "አማካኝ",
     "total": "ደረጃዎች",
-    "loginToRate": "ለመደረግ መ-login አለብዎት።",
+    "loginToRate": "ደረጃ ለመስተት መመዝገብ አለቦት አለብዎት።",
     "thankYou": "አመሰግናለሁ!",
     "ratingSaved": "ደረጃዎ ተሰቅሏል።"
   },
@@ -77,10 +77,10 @@
     "addPlaceholder": "አስተያየት ያስገቡ...",
     "noComments": "አስተያየት የለም። የመጀመሪያ ይሁኑ!",
     "deleteConfirm": "ይህን አስተያየት ለመሰረዝ እርግጠኛ ነዎት?",
-    "loginToComment": "አስተያየት ለመጻፍ መ-login አለብዎት።"
+    "loginToComment": "አስተያየት ለመጻፍ መመዝገብ አለቦት አለብዎት።"
   },
   "explore": {
-    "title": "ምግቦችን ያስሱ",
+    "title": "ምግቦችን ይፈልጉ",
     "subtitle": "{{count}}+ አስደናቂ ምግቦችን ያግኙ",
     "searchPlaceholder": "ምግቦችን፣ ፕሮግራሞችን፣ ምድቦችን ፈልግ...",
     "quickFilters": "ፈጣን ማጣሪያዎች",
@@ -119,12 +119,12 @@
     "reject": {
       "title": "የምግብ አዘገጃጀት ሰርዝ",
       "button": "ሰርዝ",
-      "confirmMessage": "እርግጠኛ ነህ/ሽ ይህን የምግብ አዘገጃጀት ለማሰርዝ?"
+      "confirmMessage": "እርግጠኛ ነህ/ሽ ይህን የምግብ አዘገጃጀት ለመሰረዝ?"
     },
     "success": {
       "title": "በተሳካ ሁኔታ",
-      "approved": "የምግብ አዘገጃጀቱ በተሳካ ሁኔታ ተጽድቋል! ደራሲው ተጠቅሷል።",
-      "rejected": "የምግብ አዘገጃጀቱ ተሰርዟል እና ተወግዷል። ደራሲው ተጠቅሷል።"
+      "approved": "የምግብ አዘገጃጀቱ በተሳካ ሁኔታ ተጽድቋል! ለ ደራሲው መልክት ይደርሰዋል።",
+      "rejected": "የምግብ አዘገጃጀቱ ተሰርዟል እና ተወግዷል። ለደራሲው መልክት ይደርሰዋል።"
     },
     "errors": {
       "title": "ስህተት",
@@ -136,7 +136,12 @@
     "emptyState": {
       "title": "ሁሉም ተጠናቅቋል! 🎉",
       "message": "ለግምገማ የሚጠብቁ የምግብ አዘገጃጀቶች የሉም"
-    }
+    },
+       "recipePreview": "የምግብ አዘገጃጀት ቅድመ እይታ",
+    "viewFullRecipe": "ሙሉ የምግብ አዘገጃጀት ይመልከቱ",
+    "processing": "በማቀናበር ላይ...",
+    "pullToRefresh": "ለማደስ ይጎትቱ",
+    "refresh": "አደስ"
   },
   "admin": {
     "title": "የአስተዳዳሪ ሳጥን",
@@ -151,12 +156,12 @@
       "stats": {
         "totalUsers": "ጠቅላላ ተጠቃሚዎች",
         "totalRecipes": "ጠቅላላ የምግብ አዘገጃጀቶች",
-        "pending": "በጥበቃ",
+        "pending": "በጥበቃ ላይ",
         "approved": "የተጸደቀ"
       },
       "quickActions": "ፈጣን ድርጊቶች",
-      "recentActivity": "የቅርብ ማድረጎች",
-      "noActivity": "ምንም የቅርብ ማድረጎች የሉም",
+      "recentActivity": "የቅርብ ተግባሮችህ",
+      "noActivity": "ምንም የቅርብ ተግባሮችህ የሉም",
       "actions": {
         "manageUsers": "ተጠቃሚዎችን ያስተዳድሩ",
         "manageUsersDesc": "ሁሉንም ተጠቃሚዎች ይመልከቱ እና ያስተዳድሩ",
@@ -165,7 +170,7 @@
         "viewAnalytics": "ትንታኔ ይመልከቱ",
         "viewAnalyticsDesc": "ዝርዝር የመድረክ ትንታኔ",
         "sendNotification": "ማሳወቂያ ይላኩ",
-        "sendNotificationDesc": "ፑሽ ማሳወቂያዎችን ይላኩ"
+        "sendNotificationDesc": "ለተተካሚዎችህ ማሳወቂያዎችን ይላኩ"
       },
       "activity": {
         "newUser": "አዲስ ተጠቃሚ ተመዝግቧል",
@@ -186,7 +191,7 @@
       },
       "success": {
         "title": "በተሳካ ሁኔታ",
-        "roleUpdated": "የተጠቃሚ ሚና ወደ ተቀይሯል",
+        "roleUpdated": "የተጠቃሚ ሚና ተቀይሯል ወደ ",
         "userDeleted": "ተጠቃሚ በተሳካ ሁኔታ ተሰርዟል"
       },
       "errors": {
@@ -196,7 +201,7 @@
       },
       "delete": {
         "title": "ተጠቃሚ ሰርዝ",
-        "confirmMessage": "እርግጠኛ ነህ/ሽ ይህን ተጠቃሚ ለማሰርዝ",
+        "confirmMessage": "እርግጠኛ ነህ/ሽ ይህን ተጠቃሚ ለመሰርዝ",
         "warning": "ይህ እርምጃ ሊመለስ አይችልም።",
         "button": "ሰርዝ"
       },
@@ -206,7 +211,7 @@
         "email": "ኢሜይል",
         "role": "ሚና",
         "recipesPosted": "የቀረቡ የምግብ አዘገጃጀቶች",
-        "memberSince": "ከዚህ ጊዜ ጀምሮ አባል"
+        "memberSince": "የተመዘገቡበት ከን"
       },
       "emptyState": {
         "title": "ምንም ተጠቃሚ አልተገኘም",
@@ -227,7 +232,7 @@
       "approve": "አጽድቅ",
       "success": {
         "title": "በተሳካ ሁኔታ",
-        "approved": "የምግብ አዘገጃጀቱ በተሳካ ሁኔታ ተጽድቋል!",
+        "approved": "የምግብ አዘገጃጀቱ በተሳካ ሁኔታ ጽድቋል!",
         "deleted": "የምግብ አዘገጃጀቱ በተሳካ ሁኔታ ተሰርዟል"
       },
       "errors": {
@@ -282,7 +287,7 @@
     "pullToRefresh": "ለማደስ ይጎትቱ",
     "unknown": "የማይታወቅ",
     "time": {
-      "justNow": "በትክክል አሁን",
+      "justNow": "አሁን",
       "minutesAgo": "ደቂቃ በፊት",
       "hoursAgo": "ሰዓት በፊት",
       "daysAgo": "ቀን በፊት"
@@ -291,10 +296,12 @@
   "profile": {
     "loading": "መገለጫ በመጫን ላይ...",
     "defaultName": "ተጠቃሚ",
+    "darkMode": "የጨለማ ሁኔታ",
+    "lightMode": "የብርሃን ሁኔታ",
     "language": "ቋንቋ",
-    "editProfile": "መገለጫ አርትዕ",
-    "notifications": "ማሳወቂያዎች",
-    "settings": "ቅንብሮች",
+    "editProfile": "መገለጫ ያስተካክሉ",
+    "notifications": "መልክቶች",
+    "settings": "ማስተካከያዎች",
     "myRecipes": "የእኔ የምግብ አዘገጃጀቶች",
     "favorites": "የሚወዱት",
     "helpSupport": "እርዳታ እና ድጋፍ",
@@ -308,11 +315,11 @@
     },
     "errors": {
       "title": "ስህተት",
-      "logoutFailed": "��ውጣት አልተቻለም። እባክዎ እንደገና ይሞክሩ።"
+      "logoutFailed": "ውጣት አልተቻለም። እባክዎ እንደገና ይሞክሩ።"
     },
     "roles": {
       "admin": "አስተዳዳሪ",
-      "moderator": "ማረጋገጫ",
+      "moderator": "አረጋጋጭ",
       "user": "ተጠቃሚ"
     }
   },
@@ -324,7 +331,7 @@
     "password": "የይለፍ ቃል",
     "passwordPlaceholder": "የይለፍ ቃልዎን ያስገቡ",
     "loginButton": "ግባ",
-    "forgotPassword": "የይለፍ ቃል ረሳችሁ?",
+    "forgotPassword": "የይለፍ ቃል ረሱ?",
     "noAccount": "መለያ የሎትም?",
     "signupLink": "ይመዝገቡ",
     "errors": {
@@ -370,24 +377,24 @@
     "errors": {
       "title": "ስህተት",
       "requiredFields": "እባክዎ ሁሉንም መስኮች ይሙሉ",
-      "passwordLength": "የይለፍ ቃል ቢያንስ 6 ቁምፊ መሆን አለበት",
+      "passwordLength": "የይለፍ ቃል ብዛት ቢያንስ 6 መሆን አለበት",
       "passwordMismatch": "የይለፍ ቃሎች አይዛመዱም",
       "generic": "በመመዝገብ ጊዜ ስህተት ተከስቷል። እባክዎ እንደገና ይሞክሩ።",
       "emailInUse": "ይህ ኢሜይል ቀድሞውኑ ተመዝግቧል። እባክዎ የተለየ ኢሜይል ይጠቀሙ ወይም ይግቡ።",
       "invalidEmail": "የኢሜይል አድራሻው ልክ አይደለም። እባክዎ ያረጋግጡ እና እንደገና ይሞክሩ።",
-      "weakPassword": "የይለፍ ቃሉ በጣም ደካማ ነው። እባክዎ ቢያንስ 6 ቁምፊዎችን ይጠቀሙ።",
+      "weakPassword": "የይለፍ ቃሉ በጣም ደካማ ነው። እባክዎ ቢያንስ 6 ቁጥሮችን ይጠቀሙ።",
       "permissionDenied": "የውሂብ ጎታ ፈቃድ ተሰንቷል። እባክዎ እንደገና ይሞክሩ ወይም እርዳታ ይጠይቁ።",
       "networkError": "የኔትዎርክ ስህተት። እባክዎ የበይነመረብ ግንኙነትዎን ያረጋግጡ።",
       "operationNotAllowed": "ኢሜይል/የይለፍ ቃል መለያዎች አልተነሱም። እባክዎ እርዳታ ይጠይቁ።"
     }
   },
   "addRecipe": {
-    "title": "የምግብ አዘገጃጀት ፍጠር",
+    "title": "የምግብ አዘገጃጀት ጨምር",
     "languageSelector": {
       "title": "ይህን የምግብ አዘገጃጀት እጨምራለሁ በ:",
       "english": "እንግሊዝኛ",
       "amharic": "አማርኛ",
-      "hint": "ስለ ትርጉም አትጨነቁ! በራስ-ሰር ወደ {language} እንተረጉመዋለን"
+      "hint": "ስለ ትርጉም አትጨነቁ! መተግበሪያው በራሱ ወደ {language} ይተረጉመዋል"
     },
     "sections": {
       "image": "የምግብ ምስል",
@@ -417,7 +424,7 @@
     "photoRequirements": "ያስፈልጋል • JPG, PNG",
     "autoTranslation": {
       "title": "ራስ-ሰር ትርጉም",
-      "description": "የምግብ አዘገጃጀትዎ በራስ-ሰር ወደ {language} ይተረጎማል"
+      "description": "የምግብ አዘገጃጀትዎ መተግበሪያው በራሱ ወደ {language} ይተረጎማል"
     },
     "submitButton": "የምግብ አዘገጃጀት አስገባ",
     "translating": "የምግብ አዘገጃጀትዎን በመተርጐም ላይ...",
@@ -434,7 +441,7 @@
     },
     "errors": {
       "permissionTitle": "ፈቃድ ያስፈልጋል",
-      "permissionMessage": "ይቅርታ፣ ይህንን ለማድረግ የካሜራ ሮል ፈቃዶች ያስፈልጉናል!",
+      "permissionMessage": "ይቅርታ፣ ይህንን ለማድረግ የካሜራ ፈቃድ ያስፈልጋል!",
       "missingImageTitle": "ምስል የለም",
       "missingImageMessage": "እባክዎ መጀመሪያ የምግብ ምስል ይምረጡ",
       "missingTitleTitle": "ርዕስ የለም",

@@ -228,7 +228,7 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    marginHorizontal: 16,
+    marginHorizontal: 8,
     marginVertical: 16,
     borderRadius: 12,
     padding: 4,
@@ -240,12 +240,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
+    
   },
   activeTab: {
     backgroundColor: '#fef6e6',
   },
   tabText: {
-    marginLeft: 6,
+    marginLeft: 2,
     fontSize: 14,
     fontWeight: '600',
     color: '#666',

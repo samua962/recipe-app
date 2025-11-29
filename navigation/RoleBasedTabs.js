@@ -1,11 +1,12 @@
-// navigation/RoleBasedTabs.js - FIXED MULTI-LANGUAGE VERSION
+// navigation/RoleBasedTabs.js - UPDATED WITH DARK MODE
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-// Import multi-language hook
+// Import multi-language hook and theme
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext'; // Import theme hook
 
 // Import all screens
 import HomeScreen from '../screens/HomeScreen';
@@ -17,8 +18,8 @@ import AdminDashboard from '../screens/AdminDashboard';
 
 const Tab = createBottomTabNavigator();
 
-// Custom tab bar style with safe area support
-const getTabBarStyle = (insets) => ({
+// Custom tab bar style with safe area support and dark mode
+const getTabBarStyle = (insets, colors) => ({
   height: 60 + insets.bottom,
   borderTopWidth: 0,
   elevation: 8,
@@ -29,7 +30,7 @@ const getTabBarStyle = (insets) => ({
   },
   shadowOpacity: 0.1,
   shadowRadius: 3,
-  backgroundColor: "#fff",
+  backgroundColor: colors.card,
   paddingBottom: 10 + insets.bottom,
   paddingTop: 10,
   marginBottom: 0,
@@ -46,16 +47,17 @@ const createTabNavigator = (Component, tabName) => {
 export function UserTabs() {
   const insets = useSafeAreaInsets();
   const { t, locale } = useLanguage();
+  const { colors, isDarkMode } = useTheme(); // Theme hook
 
   return (
     <Tab.Navigator
-      key={locale} // Force re-render when language changes
+      key={`${locale}-${isDarkMode ? 'dark' : 'light'}`} // Force re-render when language or theme changes
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarStyle: getTabBarStyle(insets),
-        tabBarActiveTintColor: "#f37d1c",
-        tabBarInactiveTintColor: "#aaa",
+        tabBarStyle: getTabBarStyle(insets, colors),
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
@@ -113,16 +115,17 @@ export function UserTabs() {
 export function ModeratorTabs() {
   const insets = useSafeAreaInsets();
   const { t, locale } = useLanguage();
+  const { colors, isDarkMode } = useTheme(); // Theme hook
 
   return (
     <Tab.Navigator
-      key={locale} // Force re-render when language changes
+      key={`${locale}-${isDarkMode ? 'dark' : 'light'}`} // Force re-render when language or theme changes
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarStyle: getTabBarStyle(insets),
-        tabBarActiveTintColor: "#f37d1c",
-        tabBarInactiveTintColor: "#aaa",
+        tabBarStyle: getTabBarStyle(insets, colors),
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
@@ -180,16 +183,17 @@ export function ModeratorTabs() {
 export function AdminTabs() {
   const insets = useSafeAreaInsets();
   const { t, locale } = useLanguage();
+  const { colors, isDarkMode } = useTheme(); // Theme hook
 
   return (
     <Tab.Navigator
-      key={locale} // Force re-render when language changes
+      key={`${locale}-${isDarkMode ? 'dark' : 'light'}`} // Force re-render when language or theme changes
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarStyle: getTabBarStyle(insets),
-        tabBarActiveTintColor: "#f37d1c",
-        tabBarInactiveTintColor: "#aaa",
+        tabBarStyle: getTabBarStyle(insets, colors),
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',
