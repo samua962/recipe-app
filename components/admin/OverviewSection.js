@@ -1,4 +1,4 @@
-// components/admin/OverviewSection.js - WITH RECIPE STRUCTURE SUPPORT
+// components/admin/OverviewSection.js - UPDATED WITH DARK MODE
 import React from 'react';
 import {
   View,
@@ -11,22 +11,21 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
 export default function OverviewSection({ stats, onNavigate, navigation, users, recipes, refreshing, onRefresh }) {
   const { locale, t } = useLanguage();
+  const { colors, isDarkMode } = useTheme();
 
-  // ADDED: Safe function to get localized text from recipe data
   const getLocalizedText = (field, recipe) => {
     if (!recipe || !recipe[field]) return '';
     
     const fieldData = recipe[field];
     
-    // If it's already a string, return it directly
     if (typeof fieldData === 'string') return fieldData;
     
-    // If it's an object with language properties, return the current locale's value
     if (typeof fieldData === 'object' && fieldData !== null) {
       return fieldData[locale] || fieldData.en || fieldData.am || '';
     }
@@ -69,7 +68,6 @@ export default function OverviewSection({ stats, onNavigate, navigation, users, 
     },
   ];
 
-  // UPDATED: Get recent activity with proper localization
   const getRecentActivity = () => {
     const recentUsers = users.slice(0, 2).map(user => ({
       type: 'user',
@@ -81,7 +79,6 @@ export default function OverviewSection({ stats, onNavigate, navigation, users, 
     }));
 
     const recentRecipes = recipes.slice(0, 2).map(recipe => {
-      // ADDED: Get localized title for recipe
       const localizedTitle = getLocalizedText('title', recipe);
       
       return {
@@ -116,78 +113,79 @@ export default function OverviewSection({ stats, onNavigate, navigation, users, 
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={['#f37d1c']}
-          tintColor="#f37d1c"
+          colors={[colors.primary]}
+          tintColor={colors.primary}
           title={t('common.pullToRefresh')}
+          titleColor={colors.primary}
         />
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* Stats Cards */}
+      {/* Stats Cards - 2x2 Grid */}
       <View style={styles.statsGrid}>
-        <View style={styles.statCard}>
-          <Ionicons name="people" size={24} color="#f37d1c" />
-          <Text style={styles.statNumber}>{stats.totalUsers}</Text>
-          <Text style={styles.statLabel}>{t('admin.overview.stats.totalUsers')}</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+          <Ionicons name="people" size={24} color={colors.primary} />
+          <Text style={[styles.statNumber, { color: colors.text }]}>{stats.totalUsers}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('admin.overview.stats.totalUsers')}</Text>
         </View>
-        <View style={styles.statCard}>
-          <Ionicons name="restaurant" size={24} color="#f37d1c" />
-          <Text style={styles.statNumber}>{stats.totalRecipes}</Text>
-          <Text style={styles.statLabel}>{t('admin.overview.stats.totalRecipes')}</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+          <Ionicons name="restaurant" size={24} color={colors.primary} />
+          <Text style={[styles.statNumber, { color: colors.text }]}>{stats.totalRecipes}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('admin.overview.stats.totalRecipes')}</Text>
         </View>
-        <View style={styles.statCard}>
-          <Ionicons name="time" size={24} color="#f37d1c" />
-          <Text style={styles.statNumber}>{stats.pendingRecipes}</Text>
-          <Text style={styles.statLabel}>{t('admin.overview.stats.pending')}</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+          <Ionicons name="time" size={24} color={colors.primary} />
+          <Text style={[styles.statNumber, { color: colors.text }]}>{stats.pendingRecipes}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('admin.overview.stats.pending')}</Text>
         </View>
-        <View style={styles.statCard}>
-          <Ionicons name="checkmark-circle" size={24} color="#f37d1c" />
-          <Text style={styles.statNumber}>{stats.approvedRecipes}</Text>
-          <Text style={styles.statLabel}>{t('admin.overview.stats.approved')}</Text>
+        <View style={[styles.statCard, { backgroundColor: colors.card }]}>
+          <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+          <Text style={[styles.statNumber, { color: colors.text }]}>{stats.approvedRecipes}</Text>
+          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('admin.overview.stats.approved')}</Text>
         </View>
       </View>
 
       {/* Quick Actions - 2x2 Grid */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('admin.overview.quickActions')}</Text>
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('admin.overview.quickActions')}</Text>
         <View style={styles.actionsGrid}>
           {quickActions.map((action) => (
             <TouchableOpacity
               key={action.id}
-              style={styles.actionCard}
+              style={[styles.actionCard, { backgroundColor: colors.background }]}
               onPress={action.onPress}
             >
               <View style={[styles.actionIcon, { backgroundColor: action.color }]}>
                 <Ionicons name={action.icon} size={24} color="#fff" />
               </View>
-              <Text style={styles.actionTitle}>{action.title}</Text>
-              <Text style={styles.actionDescription}>{action.description}</Text>
+              <Text style={[styles.actionTitle, { color: colors.text }]}>{action.title}</Text>
+              <Text style={[styles.actionDescription, { color: colors.textSecondary }]}>{action.description}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
 
-      {/* Recent Activity - Dynamic */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t('admin.overview.recentActivity')}</Text>
+      {/* Recent Activity */}
+      <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('admin.overview.recentActivity')}</Text>
         <View style={styles.activityList}>
           {getRecentActivity().length > 0 ? (
             getRecentActivity().map((activity, index) => (
-              <View key={index} style={styles.activityItem}>
+              <View key={index} style={[styles.activityItem, { backgroundColor: colors.background }]}>
                 <View style={[styles.activityIcon, { backgroundColor: activity.color }]}>
                   <Ionicons name={activity.icon} size={16} color="#fff" />
                 </View>
                 <View style={styles.activityContent}>
-                  <Text style={styles.activityTitle}>{activity.title}</Text>
-                  <Text style={styles.activityDescription}>{activity.description}</Text>
-                  <Text style={styles.activityTime}>
+                  <Text style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
+                  <Text style={[styles.activityDescription, { color: colors.textSecondary }]}>{activity.description}</Text>
+                  <Text style={[styles.activityTime, { color: colors.textSecondary }]}>
                     {formatTimeAgo(new Date(activity.time))}
                   </Text>
                 </View>
               </View>
             ))
           ) : (
-            <Text style={styles.noActivityText}>{t('admin.overview.noActivity')}</Text>
+            <Text style={[styles.noActivityText, { color: colors.textSecondary }]}>{t('admin.overview.noActivity')}</Text>
           )}
         </View>
       </View>
@@ -208,44 +206,39 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: (width - 56) / 2,
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 3,
   },
   statNumber: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginTop: 8,
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
     fontWeight: '600',
   },
   section: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 16,
   },
   actionsGrid: {
@@ -254,14 +247,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   actionCard: {
-    width: (width - 56) / 2,
-    backgroundColor: '#f8f9fa',
+    width: (width - 70) / 2,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: 'transparent',
   },
   actionIcon: {
     width: 48,
@@ -274,13 +266,11 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
     textAlign: 'center',
     marginBottom: 4,
   },
   actionDescription: {
     fontSize: 12,
-    color: '#666',
     textAlign: 'center',
   },
   activityList: {
@@ -290,7 +280,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    backgroundColor: '#f8f9fa',
     borderRadius: 8,
   },
   activityIcon: {
@@ -307,21 +296,17 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
   },
   activityDescription: {
     fontSize: 12,
-    color: '#666',
     marginTop: 2,
   },
   activityTime: {
     fontSize: 11,
-    color: '#999',
     marginTop: 2,
   },
   noActivityText: {
     textAlign: 'center',
-    color: '#999',
     fontStyle: 'italic',
     padding: 20,
   },

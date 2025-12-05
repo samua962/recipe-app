@@ -28,9 +28,9 @@ const { width } = Dimensions.get("window");
 
 // Comprehensive categories with accurate Amharic translations
 const CATEGORIES = [
-  { en: "Breakfast", am: "እራት ጠዋት" },
-  { en: "Lunch", am: "እራት ቀን" },
-  { en: "Dinner", am: "እራት ማታ" },
+  { en: "Breakfast", am: "ቁርስ" },
+  { en: "Lunch", am: "ምሳ" },
+  { en: "Dinner", am: "እራት" },
   { en: "Dessert", am: "ምርጥ ምግብ" },
   { en: "Drinks", am: "መጠጦች" },
   { en: "Vegetarian", am: "አትክልት ምግብ" },

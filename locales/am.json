@@ -9,6 +9,7 @@
     "delete": "ሰርዝ",
     "confirm": "አረጋግጥ",
     "search": "ፈልግ",
+    "ok": "እሺ",
     "permissionRequired": "ፍቃድ ያስፈልጋል"
   },
   "home": {
@@ -45,7 +46,11 @@
     "category": "ምድብ",
     "minutes": "ደቂቃ",
     "servingsUnit": "ሰዎች",
-    "featured": "የተመረጠ"
+    "featured": "የተመረጠ",
+    "noDescription": "መግለጫ የለም",
+       "deleting": "በማሰረዝ ላይ...",
+        "watchVideo": "ቪዲዮ ተመልከት",
+          "loadingVideo": "ቪዲዮ በመጫን ላይ..."
   },
   "errors": {
     "noRecipes": "ምንም ምግብ አልተገኘም",
@@ -58,26 +63,23 @@
   "auth": {
     "loginRequired": "መመዝገብ ያስፈልጋል"
   },
-  "favorites": {
-    "saved": "ምግቡ ለ በዋላ አገልግሎት ተከምቷል!",
-    "removed": "ምግቡ ከተከመቱ ምግቦች ላይ ተሰርዟል።",
-    "loginRequired": "ለማስከመት መመዝገብ ማረግ አለብዎት።",
-    "storagePermission": "የምግብ ምስሎችን ከመስመር ውጭ ለማስቀመጥ የማከማቻ መዳረሻ ይፍቀዱ።"
-  },
+ 
   "ratings": {
     "yourRating": "የእርስዎ ደረጃ",
     "average": "አማካኝ",
     "total": "ደረጃዎች",
     "loginToRate": "ደረጃ ለመስተት መመዝገብ አለቦት አለብዎት።",
     "thankYou": "አመሰግናለሁ!",
-    "ratingSaved": "ደረጃዎ ተሰቅሏል።"
+    "ratingSaved": "ደረጃዎ ተሰቅሏል።",
+    "saving": "ደረጃዎ በመስቀል ላይ..."
   },
   "comments": {
     "title": "አስተያየቶች",
     "addPlaceholder": "አስተያየት ያስገቡ...",
     "noComments": "አስተያየት የለም። የመጀመሪያ ይሁኑ!",
     "deleteConfirm": "ይህን አስተያየት ለመሰረዝ እርግጠኛ ነዎት?",
-    "loginToComment": "አስተያየት ለመጻፍ መመዝገብ አለቦት አለብዎት።"
+    "loginToComment": "አስተያየት ለመጻፍ መመዝገብ አለቦት አለብዎት።",
+    "adding": "አስተያየትዎ በመጨመር ላይ..."
   },
   "explore": {
     "title": "ምግቦችን ይፈልጉ",
@@ -184,6 +186,12 @@
     "users": {
       "searchPlaceholder": "ተጠቃሚዎችን ይፈልጉ...",
       "recipes": "የምግብ አዘገጃጀቶች",
+      "processing": "በማቀናበር ላይ...",
+     "roleChange": {
+        "title": "ሚና ቀይር",
+        "message": "የ {name} ሚና ወደ {{role}} ይቀየር?",
+        "confirm": "ሚና ቀይር"
+      },
       "roles": {
         "admin": "አስተዳዳሪ",
         "moderator": "ማረጋገጫ",
@@ -285,13 +293,19 @@
     "close": "ዝጋ",
     "refresh": "አድስ",
     "pullToRefresh": "ለማደስ ይጎትቱ",
+      "delete": "አስወግድ",
     "unknown": "የማይታወቅ",
+    "error": "ስህተት",
+    "success": "ተሳክቷል",
     "time": {
       "justNow": "አሁን",
       "minutesAgo": "ደቂቃ በፊት",
       "hoursAgo": "ሰዓት በፊት",
       "daysAgo": "ቀን በፊት"
-    }
+    },
+     "recipe": {
+    "minutes": "ደቂቃ"
+  }
   },
   "profile": {
     "loading": "መገለጫ በመጫን ላይ...",
@@ -457,6 +471,24 @@
       "uploadTitle": "የመጫን ስህተት",
       "uploadMessage": "የምግብ አዘገጃጀትዎን በማስገባት ጊዜ አንድ ችግር ተከስቷል"
     }
+  },
+  "favorites": {
+    "title": "የእኔ ተወዳጆች",
+    "subtitle": "የተቀመጡ የምግብ አዘገጃጀቶች",
+    "recipesSaved": "የተቀመጡ የምግብ አዘገጀቶች",
+    "loading": "ተወዳጆችዎ በመጫን ላይ...",
+    "emptyTitle": "እስካሁን ተወዳጆች የሉም",
+    "emptyMessage": "የሚወዷቸውን የምግብ አዘገጃጀቶች ለማስቀመጥ ያስቀምጡ",
+    "exploreRecipes": "የምግብ አዘገጃጀቶችን ይፈልጉ",
+    "deleteTitle": "ከተወዳጆች ላይ ማስወገድ",
+    "deleteMessage": "\"{title}\" ከተወዳጆችዎ ላይ ለማስወገድ እርግጠኛ ነዎት?",
+    "deleteError": "የምግብ አዘገጃጀቱን ከተወዳጆች ላይ ማስወገድ አልተሳካም",
+    "offlineMode": "ከመስመር ውጪ ሁነት: የተቀመጡ የምግብ አዘገጃጀቶች በማሳየት ላይ",
+    "deleteSuccess": "የምግብ አዘገጃጀቱ ከተወዳጆች ላይ ተወግዷል",
+      "saved": "ምግቡ ለ በዋላ አገልግሎት ተከምቷል!",
+    "removed": "ምግቡ ከተከመቱ ምግቦች ላይ ተሰርዟል።",
+    "loginRequired": "ለማስከመት መመዝገብ ማረግ አለብዎት።",
+    "storagePermission": "የምግብ ምስሎችን ከመስመር ውጭ ለማስቀመጥ የማከማቻ መዳረሻ ይፍቀዱ።"
   }
  
 }

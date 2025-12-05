@@ -9,6 +9,7 @@
     "delete": "Delete",
     "confirm": "Confirm",
     "search": "Search",
+    "ok": "OK",
       "permissionRequired": "Permission Required"
 
   },
@@ -46,7 +47,12 @@
     "category": "Category",
     "minutes": "min",
     "servingsUnit": "servings",
-    "featured": "Featured"
+    "featured": "Featured",
+    "noDescription":"No description available",
+    "deleting": "Deleting...",
+        "watchVideo": "Watch Video",
+        "loadingVideo": "Loading video..."
+
   },
   "errors": {
     "noRecipes": "No recipes found",
@@ -59,26 +65,24 @@
    "auth": {
     "loginRequired": "Login Required"
   },
-  "favorites": {
-    "saved": "Recipe saved for offline use!",
-    "removed": "Recipe removed from favourites.",
-    "loginRequired": "Please log in to save favourites.",
-    "storagePermission": "Please allow storage access to save recipe images offline."
-  },
+ 
   "ratings": {
     "yourRating": "Your Rating",
     "average": "Average",
     "total": "ratings",
     "loginToRate": "You must log in to rate.",
     "thankYou": "Thank you!",
-    "ratingSaved": "Your rating has been saved."
+    "ratingSaved": "Your rating has been saved.",
+    "saving": "Saving your rating...",
+    "loading":"Loading..."
   },
   "comments": {
     "title": "Comments",
     "addPlaceholder": "Add a comment...",
     "noComments": "No comments yet. Be the first!",
     "deleteConfirm": "Are you sure you want to delete this comment?",
-    "loginToComment": "You must log in to comment."
+    "loginToComment": "You must log in to comment.",
+    "adding": "Adding your comment..."
   },
   "explore": {
     "title": "Explore Recipes",
@@ -137,7 +141,15 @@
     "emptyState": {
       "title": "All Caught Up! 🎉",
       "message": "No pending recipes to review"
+    },  "approveConfirm": {
+      "title": "Approve Recipe",
+      "message": "Are you sure you want to approve \"{title}\"?"
     },
+    "rejectConfirm": {
+      "title": "Reject Recipe", 
+      "message": "Are you sure you want to reject \"{title}\"? This action cannot be undone."
+    },
+ 
       "recipePreview": "Recipe Preview",
     "viewFullRecipe": "View Full Recipe",
     "processing": "Processing...",
@@ -189,7 +201,13 @@
     },
     "users": {
       "searchPlaceholder": "Search users...",
-      "recipes": "Recipes",
+           "recipes": "Recipes",
+    "processing": "Processing...",
+     "roleChange": {
+        "title": "Change User Role",
+        "message": "Change {name}'s role to {newRole}?",
+        "confirm": "Change Role"
+      },
       "roles": {
         "admin": "Admin",
         "moderator": "Moderator",
@@ -291,6 +309,11 @@
     "refresh": "Refresh",
     "pullToRefresh": "Pull to refresh",
     "unknown": "Unknown",
+
+    "delete": "አስወግድ",
+    "error": "ስህተት",
+    "success": "ተሳክቷል",
+
     "time": {
       "justNow": "Just now",
       "minutesAgo": "minutes ago",
@@ -462,7 +485,26 @@
       "uploadTitle": "Upload Error",
       "uploadMessage": "Something went wrong while uploading your recipe"
     }
+  },
+   "favorites": {
+    "title": "My Favorites",
+    "subtitle": "recipes saved",
+    "recipesSaved": "recipes saved",
+    "loading": "Loading your favorites...",
+    "emptyTitle": "No favorites yet",
+    "emptyMessage": "Save your favorite recipes to find them easily later",
+    "exploreRecipes": "Explore Recipes",
+    "deleteTitle": "Remove from Favorites",
+    "deleteMessage": "Are you sure you want to remove \"{title}\" from your favorites?",
+    "deleteError": "Failed to remove recipe from favorites",
+    "offlineMode": "Offline Mode: Showing saved recipes",
+    "deleteSuccess": "Recipe removed from favorites",
+        "saved": "Recipe saved for offline use!",
+    "removed": "Recipe removed from favourites.",
+    "loginRequired": "Please log in to save favourites.",
+    "storagePermission": "Please allow storage access to save recipe images offline."
   }
+
  
 
 

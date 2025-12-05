@@ -1,4 +1,4 @@
-// screens/AdminDashboard.js - MULTI-LANGUAGE VERSION
+// screens/AdminDashboard.js - UPDATED WITH DARK MODE
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -8,11 +8,13 @@ import {
   StatusBar,
   RefreshControl,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
-import { useLanguage } from '../contexts/LanguageContext'; // ADDED
+import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext'; // Import theme hook
 
 // Import modular components
 import OverviewSection from '../components/admin/OverviewSection';
@@ -36,8 +38,8 @@ export default function AdminDashboard({ navigation }) {
     regularUsers: 0
   });
 
-  // ADDED: Multi-language hook
   const { locale, t } = useLanguage();
+  const { colors, isDarkMode } = useTheme(); // Theme hook
 
   const tabs = [
     { id: 'overview', title: t('admin.tabs.overview'), icon: 'grid' },
@@ -165,31 +167,38 @@ export default function AdminDashboard({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
       
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('admin.title')}</Text>
-        <Text style={styles.headerSubtitle}>
+      <View style={[styles.header, { backgroundColor: colors.card }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('admin.title')}</Text>
+        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
           {t('admin.subtitle')}
         </Text>
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabContainer}>
+      <View style={[styles.tabContainer, { backgroundColor: colors.card }]}>
         {tabs.map(tab => (
           <TouchableOpacity
             key={tab.id}
-            style={[styles.tab, activeTab === tab.id && styles.activeTab]}
+            style={[
+              styles.tab, 
+              activeTab === tab.id && [styles.activeTab, { backgroundColor: isDarkMode ? 'rgba(243, 125, 28, 0.1)' : '#fef6e6' }]
+            ]}
             onPress={() => setActiveTab(tab.id)}
           >
             <Ionicons 
               name={tab.icon} 
               size={20} 
-              color={activeTab === tab.id ? '#f37d1c' : '#666'} 
+              color={activeTab === tab.id ? colors.primary : colors.textSecondary} 
             />
-            <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>
+            <Text style={[
+              styles.tabText, 
+              { color: colors.textSecondary },
+              activeTab === tab.id && [styles.activeTabText, { color: colors.primary }]
+            ]}>
               {tab.title}
             </Text>
           </TouchableOpacity>
@@ -207,31 +216,36 @@ export default function AdminDashboard({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
-    backgroundColor: '#fff',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: '#666',
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     marginHorizontal: 8,
     marginVertical: 16,
     borderRadius: 12,
     padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tab: {
     flex: 1,
@@ -240,19 +254,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    
   },
   activeTab: {
-    backgroundColor: '#fef6e6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   tabText: {
     marginLeft: 2,
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
   },
   activeTabText: {
-    color: '#f37d1c',
+    fontWeight: '700',
   },
   content: {
     flex: 1,

@@ -1,4 +1,4 @@
-// screens/NotificationsScreen.js
+// screens/NotificationsScreen.js - UPDATED FOOTER POSITION & CUSTOM DIALOGS
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -9,16 +9,27 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  TouchableWithoutFeedback,
+  KeyboardAvoidingView,
+  Platform,
+  ProgressBarAndroid,
+  ProgressViewIOS,
 } from 'react-native';
 import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, writeBatch, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function NotificationsScreen({ navigation }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteInProgress, setDeleteInProgress] = useState(false);
+  const [selectedNotificationId, setSelectedNotificationId] = useState(null);
+  const { colors, isDarkMode } = useTheme();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -70,7 +81,7 @@ export default function NotificationsScreen({ navigation }) {
       });
     } catch (error) {
       console.error('Error marking notification as read:', error);
-      Alert.alert('Error', 'Failed to mark notification as read');
+      showErrorDialog('Failed to mark notification as read');
     }
   };
 
@@ -86,33 +97,44 @@ export default function NotificationsScreen({ navigation }) {
       });
 
       await batch.commit();
-      Alert.alert('Success', 'All notifications marked as read');
+      showSuccessDialog('All notifications marked as read');
     } catch (error) {
       console.error('Error marking all as read:', error);
-      Alert.alert('Error', 'Failed to mark all notifications as read');
+      showErrorDialog('Failed to mark all notifications as read');
     }
   };
 
-  const deleteNotification = async (notificationId) => {
-    Alert.alert(
-      'Delete Notification',
-      'Are you sure you want to delete this notification?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, 'notifications', notificationId));
-            } catch (error) {
-              console.error('Error deleting notification:', error);
-              Alert.alert('Error', 'Failed to delete notification');
-            }
-          },
-        },
-      ]
-    );
+  const showDeleteDialog = (notificationId) => {
+    setSelectedNotificationId(notificationId);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedNotificationId) return;
+    
+    setDeleteInProgress(true);
+    try {
+      await deleteDoc(doc(db, 'notifications', selectedNotificationId));
+      setDeleteModalVisible(false);
+      setSelectedNotificationId(null);
+      
+      // Show success message briefly
+      setTimeout(() => {
+        setDeleteInProgress(false);
+      }, 500);
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      showErrorDialog('Failed to delete notification');
+      setDeleteInProgress(false);
+    }
+  };
+
+  const showSuccessDialog = (message) => {
+    Alert.alert('Success', message, [{ text: 'OK', style: 'default' }]);
+  };
+
+  const showErrorDialog = (message) => {
+    Alert.alert('Error', message, [{ text: 'OK', style: 'destructive' }]);
   };
 
   const getNotificationIcon = (type, action) => {
@@ -147,9 +169,9 @@ export default function NotificationsScreen({ navigation }) {
       case 'new_rating':
         return '#ffc107';
       case 'user_notification':
-        return '#f37d1c';
+        return colors.primary;
       default:
-        return '#666';
+        return colors.textSecondary;
     }
   };
 
@@ -176,9 +198,21 @@ export default function NotificationsScreen({ navigation }) {
 
   const renderNotificationItem = ({ item }) => (
     <TouchableOpacity 
-      style={[styles.notificationItem, !item.read && styles.unreadNotification]}
+      style={[
+        styles.notificationItem, 
+        { 
+          backgroundColor: colors.card,
+          shadowColor: isDarkMode ? 'transparent' : '#000',
+          borderLeftColor: 'transparent',
+          borderLeftWidth: 4,
+        },
+        !item.read && {
+          borderLeftColor: colors.primary,
+          backgroundColor: isDarkMode ? colors.badgeBg : '#fef8f4',
+        }
+      ]}
       onPress={() => markAsRead(item.id)}
-      onLongPress={() => deleteNotification(item.id)}
+      onLongPress={() => showDeleteDialog(item.id)}
     >
       <View style={styles.notificationContent}>
         <View style={styles.notificationHeader}>
@@ -190,13 +224,13 @@ export default function NotificationsScreen({ navigation }) {
             />
           </View>
           <View style={styles.notificationText}>
-            <Text style={styles.notificationTitle}>{item.title}</Text>
-            <Text style={styles.notificationBody}>{item.body}</Text>
-            <Text style={styles.notificationTime}>{formatTime(item.createdAt)}</Text>
+            <Text style={[styles.notificationTitle, { color: colors.text }]}>{item.title}</Text>
+            <Text style={[styles.notificationBody, { color: colors.textSecondary }]}>{item.body}</Text>
+            <Text style={[styles.notificationTime, { color: colors.textSecondary }]}>{formatTime(item.createdAt)}</Text>
           </View>
         </View>
         
-        {!item.read && <View style={styles.unreadDot} />}
+        {!item.read && <View style={[styles.unreadDot, { backgroundColor: colors.primary }]} />}
       </View>
     </TouchableOpacity>
   );
@@ -205,21 +239,28 @@ export default function NotificationsScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#f37d1c" />
-        <Text style={styles.loadingText}>Loading notifications...</Text>
+      <View style={[styles.centerContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading notifications...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[
+        styles.header, 
+        { 
+          backgroundColor: colors.card,
+          borderBottomColor: colors.border,
+          shadowColor: isDarkMode ? 'transparent' : '#000',
+        }
+      ]}>
         <View style={styles.headerLeft}>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>Notifications</Text>
           {unreadCount > 0 && (
-            <View style={styles.badge}>
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
               <Text style={styles.badgeText}>{unreadCount}</Text>
             </View>
           )}
@@ -227,17 +268,17 @@ export default function NotificationsScreen({ navigation }) {
         
         {unreadCount > 0 && (
           <TouchableOpacity style={styles.markAllButton} onPress={markAllAsRead}>
-            <Text style={styles.markAllText}>Mark all read</Text>
+            <Text style={[styles.markAllText, { color: colors.primary }]}>Mark all read</Text>
           </TouchableOpacity>
         )}
       </View>
 
       {/* Notifications List */}
       {notifications.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="notifications-off-outline" size={80} color="#ddd" />
-          <Text style={styles.emptyStateTitle}>No notifications yet</Text>
-          <Text style={styles.emptyStateText}>
+        <View style={[styles.emptyState, { backgroundColor: colors.background }]}>
+          <Ionicons name="notifications-off-outline" size={80} color={colors.placeholder} />
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>No notifications yet</Text>
+          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
             You'll see important updates about your recipes and activity here
           </Text>
         </View>
@@ -253,24 +294,141 @@ export default function NotificationsScreen({ navigation }) {
                 setRefreshing(true);
                 loadNotifications();
               }}
-              colors={['#f37d1c']}
-              tintColor="#f37d1c"
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+              titleColor={colors.primary}
             />
           }
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, { 
+            paddingBottom: 100, // Extra padding for safe area
+          }]}
           showsVerticalScrollIndicator={false}
         />
       )}
 
-      {/* Quick Actions */}
+      {/* Footer - Now placed above tab navigation */}
       {notifications.length > 0 && (
-        <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
-            {unreadCount > 0 && ` • ${unreadCount} unread`}
-          </Text>
+        <View style={[
+          styles.footer, 
+          { 
+            backgroundColor: colors.card,
+            borderTopColor: colors.border,
+            borderTopWidth: 1,
+          }
+        ]}>
+          <View style={styles.footerContent}>
+            <View style={styles.footerStats}>
+              <Text style={[styles.footerText, { color: colors.text }]}>
+                {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+              </Text>
+              {unreadCount > 0 && (
+                <View style={styles.unreadIndicator}>
+                  <View style={[styles.unreadDotSmall, { backgroundColor: colors.primary }]} />
+                  <Text style={[styles.footerUnreadText, { color: colors.primary }]}>
+                    {unreadCount} unread
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
         </View>
       )}
+
+      {/* Custom Delete Confirmation Dialog */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!deleteInProgress) {
+            setDeleteModalVisible(false);
+            setSelectedNotificationId(null);
+          }
+        }}
+      >
+        <TouchableWithoutFeedback 
+          onPress={() => {
+            if (!deleteInProgress) {
+              setDeleteModalVisible(false);
+              setSelectedNotificationId(null);
+            }
+          }}
+        >
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.dialogContainer, { backgroundColor: colors.card }]}>
+                {/* Dialog Header */}
+                <View style={[styles.dialogHeader, { borderBottomColor: colors.border }]}>
+                  <Ionicons name="warning" size={28} color={colors.primary} />
+                  <Text style={[styles.dialogTitle, { color: colors.text }]}>
+                    Delete Notification
+                  </Text>
+                </View>
+
+                {/* Dialog Content */}
+                <View style={styles.dialogContent}>
+                  <Text style={[styles.dialogMessage, { color: colors.textSecondary }]}>
+                    Are you sure you want to delete this notification?
+                  </Text>
+                  <Text style={[styles.dialogSubMessage, { color: colors.textSecondary }]}>
+                    This action cannot be undone.
+                  </Text>
+                  
+                  {/* Progress Bar when deleting */}
+                  {deleteInProgress && (
+                    <View style={styles.progressContainer}>
+                      {Platform.OS === 'android' ? (
+                        <ProgressBarAndroid
+                          styleAttr="Horizontal"
+                          indeterminate={true}
+                          color={colors.primary}
+                          style={styles.progressBar}
+                        />
+                      ) : (
+                        <ProgressViewIOS
+                          progressTintColor={colors.primary}
+                          trackTintColor={isDarkMode ? '#444' : '#e0e0e0'}
+                          style={styles.progressBarIOS}
+                        />
+                      )}
+                      <Text style={[styles.deletingText, { color: colors.textSecondary }]}>
+                        Deleting...
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Dialog Actions */}
+                {!deleteInProgress && (
+                  <View style={[styles.dialogActions, { borderTopColor: colors.border }]}>
+                    <TouchableOpacity
+                      style={[styles.dialogButton, styles.cancelButton]}
+                      onPress={() => {
+                        setDeleteModalVisible(false);
+                        setSelectedNotificationId(null);
+                      }}
+                      disabled={deleteInProgress}
+                    >
+                      <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={[styles.dialogButton, styles.deleteButton, { backgroundColor: colors.primary }]}
+                      onPress={handleDelete}
+                      disabled={deleteInProgress}
+                    >
+                      <Ionicons name="trash-outline" size={18} color="#fff" />
+                      <Text style={styles.deleteButtonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
 }
@@ -278,22 +436,19 @@ export default function NotificationsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e9ecef',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    marginTop:20,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -302,11 +457,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#333',
     marginRight: 8,
   },
   badge: {
-    backgroundColor: '#f37d1c',
     borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -323,7 +476,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   markAllText: {
-    color: '#f37d1c',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -331,11 +483,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
   },
   loadingText: {
     marginTop: 12,
-    color: '#666',
     fontSize: 16,
   },
   emptyState: {
@@ -343,41 +493,29 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#f8f9fa',
   },
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 16,
-    color: '#666',
     textAlign: 'center',
     lineHeight: 22,
   },
   listContent: {
     padding: 16,
-    paddingBottom: 80, // Space for footer
   },
   notificationItem: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     marginBottom: 12,
     padding: 16,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
-    borderLeftWidth: 4,
-    borderLeftColor: 'transparent',
-  },
-  unreadNotification: {
-    borderLeftColor: '#f37d1c',
-    backgroundColor: '#fef8f4',
   },
   notificationContent: {
     flexDirection: 'row',
@@ -402,41 +540,151 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 4,
   },
   notificationBody: {
     fontSize: 14,
-    color: '#666',
     lineHeight: 20,
     marginBottom: 6,
   },
   notificationTime: {
     fontSize: 12,
-    color: '#999',
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#f37d1c',
     marginLeft: 8,
     marginTop: 4,
   },
+  // Footer Styles - Fixed position
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  footerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  footerStats: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
   footerText: {
     fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  unreadIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 16,
+  },
+  unreadDotSmall: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 6,
+  },
+  footerUnreadText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Custom Dialog Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dialogContainer: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  dialogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+  },
+  dialogTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginLeft: 12,
+    flex: 1,
+  },
+  dialogContent: {
+    padding: 20,
+  },
+  dialogMessage: {
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  dialogSubMessage: {
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  progressContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  progressBar: {
+    width: '100%',
+    height: 4,
+  },
+  progressBarIOS: {
+    width: '100%',
+    height: 4,
+    marginBottom: 8,
+  },
+  deletingText: {
+    fontSize: 14,
+    marginTop: 8,
+  },
+  dialogActions: {
+    flexDirection: 'row',
+    borderTopWidth: 1,
+  },
+  dialogButton: {
+    flex: 1,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    borderRightWidth: 1,
+    borderRightColor: '#e0e0e0',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });

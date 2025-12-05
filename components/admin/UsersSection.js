@@ -1,4 +1,4 @@
-// components/admin/UsersSection.js - FIXED IMPORT
+// components/admin/UsersSection.js - UPDATED WITH USE NAVIGATION
 import React, { useState } from 'react';
 import {
   View,
@@ -6,28 +6,42 @@ import {
   FlatList,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   TextInput,
   Modal,
   RefreshControl,
+  ActivityIndicator,
+  Animated,
+  Dimensions,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native'; // ADDED
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import { Ionicons } from '@expo/vector-icons';
 import CustomDialog from '../CustomDialog';
-import { useLanguage } from '../../contexts/LanguageContext'; // FIXED: Changed from '../contexts' to '../../contexts'
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useTheme } from '../../contexts/ThemeContext';
+
+const { width } = Dimensions.get('window');
 
 export default function UsersSection({ users, recipes, onRefresh, refreshing, onRefreshParent }) {
+  const navigation = useNavigation(); // ADDED
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showUserDialog, setShowUserDialog] = useState(false);
-  const [showDialog, setShowDialog] = useState(false);
+  const [showActionDialog, setShowActionDialog] = useState(false);
+  const [actionType, setActionType] = useState('');
+  const [targetUser, setTargetUser] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showInfoDialog, setShowInfoDialog] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogMessage, setDialogMessage] = useState('');
+  const [dialogIcon, setDialogIcon] = useState('information-circle');
+  const [dialogAnimation] = useState(new Animated.Value(0));
 
   const { locale, t } = useLanguage();
+  const { colors, isDarkMode } = useTheme();
 
-  // ... rest of the component remains the same
   const filteredUsers = users.filter(user =>
     user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -38,13 +52,39 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
     return recipes.filter(recipe => recipe.authorId === userId).length;
   };
 
-  const showCustomDialog = (title, message) => {
+  const showCustomDialog = (title, message, icon = "information-circle") => {
     setDialogTitle(title);
     setDialogMessage(message);
-    setShowDialog(true);
+    setDialogIcon(icon);
+    setShowInfoDialog(true);
+  };
+
+  const showActionConfirmation = (user, type) => {
+    setTargetUser(user);
+    setActionType(type);
+    setShowActionDialog(true);
+    Animated.spring(dialogAnimation, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 50,
+      friction: 7,
+    }).start();
+  };
+
+  const hideActionDialog = () => {
+    Animated.timing(dialogAnimation, {
+      toValue: 0,
+      duration: 200,
+      useNativeDriver: true,
+    }).start(() => {
+      setShowActionDialog(false);
+      setTargetUser(null);
+      setActionType('');
+    });
   };
 
   const handleRoleChange = async (userId, newRole) => {
+    setActionLoading(true);
     try {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, {
@@ -52,36 +92,43 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
         updatedAt: new Date(),
       });
       
-      showCustomDialog(t('admin.users.success.title'), `${t('admin.users.success.roleUpdated')} ${newRole}`);
+      showCustomDialog(t('admin.users.success.title'), `${t('admin.users.success.roleUpdated')} ${t(`admin.users.roles.${newRole}`)}`, "checkmark-circle");
       onRefresh();
     } catch (error) {
       console.error('Error updating user role:', error);
-      showCustomDialog(t('admin.users.errors.title'), `${t('admin.users.errors.roleUpdateFailed')} ${error.message}`);
+      showCustomDialog(t('admin.users.errors.title'), `${t('admin.users.errors.roleUpdateFailed')} ${error.message}`, "close-circle");
+    } finally {
+      setActionLoading(false);
+      hideActionDialog();
     }
   };
 
-  const handleDeleteUser = (user) => {
-    Alert.alert(
-      t('admin.users.delete.title'),
-      `${t('admin.users.delete.confirmMessage')} ${user.name}? ${t('admin.users.delete.warning')}`,
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('admin.users.delete.button'),
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, 'users', user.id));
-              showCustomDialog(t('admin.users.success.title'), t('admin.users.success.userDeleted'));
-              onRefresh();
-            } catch (error) {
-              console.error('Error deleting user:', error);
-              showCustomDialog(t('admin.users.errors.title'), `${t('admin.users.errors.deleteFailed')} ${error.message}`);
-            }
-          },
-        },
-      ]
-    );
+  const handleDeleteUser = async () => {
+    if (!targetUser) return;
+    
+    setActionLoading(true);
+    try {
+      await deleteDoc(doc(db, 'users', targetUser.id));
+      showCustomDialog(t('admin.users.success.title'), t('admin.users.success.userDeleted'), "checkmark-circle");
+      onRefresh();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      showCustomDialog(t('admin.users.errors.title'), `${t('admin.users.errors.deleteFailed')} ${error.message}`, "close-circle");
+    } finally {
+      setActionLoading(false);
+      hideActionDialog();
+    }
+  };
+
+  const handleActionConfirm = async () => {
+    if (!targetUser) return;
+    
+    if (actionType === 'delete') {
+      await handleDeleteUser();
+    } else if (actionType.startsWith('role_')) {
+      const newRole = actionType.replace('role_', '');
+      await handleRoleChange(targetUser.id, newRole);
+    }
   };
 
   const showUserDetails = (user) => {
@@ -98,10 +145,117 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
     }
   };
 
+  const ActionDialog = () => {
+    const translateY = dialogAnimation.interpolate({
+      inputRange: [0, 1],
+      outputRange: [300, 0],
+    });
+
+    const opacity = dialogAnimation.interpolate({
+      inputRange: [0, 1],
+      outputRange: [0, 1],
+    });
+
+    const getDialogContent = () => {
+      if (actionType === 'delete') {
+        return {
+          icon: "trash-outline",
+          iconColor: "#e74c3c",
+          title: t('admin.users.delete.title'),
+          message: `${t('admin.users.delete.confirmMessage')} ${targetUser?.name}? ${t('admin.users.delete.warning')}`,
+          confirmText: t('admin.users.delete.button'),
+          confirmColor: "#e74c3c"
+        };
+      } else if (actionType.startsWith('role_')) {
+        const newRole = actionType.replace('role_', '');
+        return {
+          icon: "person-outline",
+          iconColor: "#3498db",
+          title: t('admin.users.roleChange.title'),
+          message: t('admin.users.roleChange.message', { 
+            name: targetUser?.name, 
+            newRole: t(`admin.users.roles.${newRole}`) 
+          }),
+          confirmText: t('admin.users.roleChange.confirm'),
+          confirmColor: "#3498db"
+        };
+      }
+      return null;
+    };
+
+    const content = getDialogContent();
+    if (!content) return null;
+
+    return (
+      <Modal
+        visible={showActionDialog}
+        transparent
+        animationType="none"
+        onRequestClose={hideActionDialog}
+      >
+        <View style={styles.dialogOverlay}>
+          <Animated.View style={[styles.dialogContainer, { 
+            backgroundColor: colors.card,
+            opacity,
+            transform: [{ translateY }] 
+          }]}>
+            <View style={[styles.dialogIcon, { backgroundColor: `${content.iconColor}20` }]}>
+              <Ionicons name={content.icon} size={48} color={content.iconColor} />
+            </View>
+            
+            <Text style={[styles.dialogTitle, { color: colors.text }]}>
+              {content.title}
+            </Text>
+            
+            <Text style={[styles.dialogMessage, { color: colors.textSecondary }]}>
+              {content.message}
+            </Text>
+            
+            {actionLoading && (
+              <View style={styles.progressContainer}>
+                <ActivityIndicator size="small" color={content.iconColor} />
+                <Text style={[styles.progressText, { color: colors.textSecondary }]}>
+                  {t('admin.users.processing')}
+                </Text>
+              </View>
+            )}
+            
+            <View style={styles.dialogButtons}>
+              <TouchableOpacity 
+                style={[styles.dialogButton, styles.cancelButton, { borderColor: colors.border }]}
+                onPress={hideActionDialog}
+                disabled={actionLoading}
+              >
+                <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+                  {t('common.cancel')}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.dialogButton, { backgroundColor: content.confirmColor }]}
+                onPress={handleActionConfirm}
+                disabled={actionLoading}
+              >
+                {actionLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.confirmButtonText}>
+                    {content.confirmText}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  };
+
   const renderUserItem = ({ item }) => (
     <TouchableOpacity 
-      style={styles.userCard}
+      style={[styles.userCard, { backgroundColor: colors.card }]}
       onPress={() => showUserDetails(item)}
+      activeOpacity={0.9}
     >
       <View style={styles.userHeader}>
         <View style={styles.userInfo}>
@@ -109,50 +263,65 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
             <Ionicons name="person" size={14} color="#fff" />
             <Text style={styles.roleText}>{t(`admin.users.roles.${item.role}`)}</Text>
           </View>
-          <Text style={styles.userName}>{item.name}</Text>
+          <Text style={[styles.userName, { color: colors.text }]}>{item.name}</Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="#ccc" />
+        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
       </View>
       
-      <Text style={styles.userEmail}>{item.email}</Text>
-      <Text style={styles.userRecipes}>
+      <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{item.email}</Text>
+      <Text style={[styles.userRecipes, { color: colors.textSecondary }]}>
         {t('admin.users.recipes')}: {getUserRecipeCount(item.id)}
       </Text>
       
       <View style={styles.actionsRow}>
         <TouchableOpacity 
-          style={[styles.roleButton, item.role === 'user' && styles.activeRoleButton]}
-          onPress={() => handleRoleChange(item.id, 'user')}
+          style={[
+            styles.roleButton, 
+            { backgroundColor: colors.background, borderColor: colors.border },
+            item.role === 'user' && [styles.activeRoleButton, { backgroundColor: colors.primary, borderColor: colors.primary }]
+          ]}
+          onPress={() => showActionConfirmation(item, 'role_user')}
         >
           <Text style={[
             styles.roleButtonText,
+            { color: colors.textSecondary },
             item.role === 'user' && styles.activeRoleText
           ]}>{t('admin.users.roles.user')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.roleButton, item.role === 'moderator' && styles.activeRoleButton]}
-          onPress={() => handleRoleChange(item.id, 'moderator')}
+          style={[
+            styles.roleButton, 
+            { backgroundColor: colors.background, borderColor: colors.border },
+            item.role === 'moderator' && [styles.activeRoleButton, { backgroundColor: colors.primary, borderColor: colors.primary }]
+          ]}
+          onPress={() => showActionConfirmation(item, 'role_moderator')}
         >
           <Text style={[
             styles.roleButtonText,
+            { color: colors.textSecondary },
             item.role === 'moderator' && styles.activeRoleText
           ]}>{t('admin.users.roles.moderator')}</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.roleButton, item.role === 'admin' && styles.activeRoleButton]}
-          onPress={() => handleRoleChange(item.id, 'admin')}
+          style={[
+            styles.roleButton, 
+            { backgroundColor: colors.background, borderColor: colors.border },
+            item.role === 'admin' && [styles.activeRoleButton, { backgroundColor: colors.primary, borderColor: colors.primary }]
+          ]}
+          onPress={() => showActionConfirmation(item, 'role_admin')}
         >
           <Text style={[
             styles.roleButtonText,
+            { color: colors.textSecondary },
             item.role === 'admin' && styles.activeRoleText
           ]}>{t('admin.users.roles.admin')}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           style={styles.deleteButton}
-          onPress={() => handleDeleteUser(item)}
+          onPress={() => showActionConfirmation(item, 'delete')}
         >
           <Ionicons name="trash-outline" size={18} color="#e74c3c" />
         </TouchableOpacity>
@@ -161,30 +330,35 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#999" style={styles.searchIcon} />
+      <View style={[styles.searchContainer, { 
+        backgroundColor: colors.card, 
+        borderColor: colors.border 
+      }]}>
+        <Ionicons name="search" size={20} color={colors.textSecondary} style={styles.searchIcon} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder={t('admin.users.searchPlaceholder')}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery ? (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={20} color="#999" />
+            <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {/* User List with Pull-to-Refresh */}
+      {/* User List */}
       {filteredUsers.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="people-outline" size={80} color="#ddd" />
-          <Text style={styles.emptyStateTitle}>{t('admin.users.emptyState.title')}</Text>
-          <Text style={styles.emptyStateText}>
+        <View style={[styles.emptyState, { backgroundColor: colors.background }]}>
+          <Ionicons name="people-outline" size={80} color={colors.border} />
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+            {t('admin.users.emptyState.title')}
+          </Text>
+          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
             {searchQuery ? t('admin.users.emptyState.adjustSearch') : t('admin.users.emptyState.noUsers')}
           </Text>
         </View>
@@ -199,9 +373,10 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefreshParent}
-              colors={['#f37d1c']}
-              tintColor="#f37d1c"
+              colors={[colors.primary]}
+              tintColor={colors.primary}
               title={t('common.pullToRefresh')}
+              titleColor={colors.primary}
             />
           }
         />
@@ -215,40 +390,52 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
         onRequestClose={() => setShowUserDialog(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t('admin.users.details.title')}</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {t('admin.users.details.title')}
+              </Text>
               <TouchableOpacity 
                 style={styles.closeButton}
                 onPress={() => setShowUserDialog(false)}
               >
-                <Ionicons name="close" size={24} color="#666" />
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             {selectedUser && (
               <View style={styles.userDetails}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>{t('admin.users.details.name')}:</Text>
-                  <Text style={styles.detailValue}>{selectedUser.name}</Text>
+                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
+                    {t('admin.users.details.name')}:
+                  </Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{selectedUser.name}</Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>{t('admin.users.details.email')}:</Text>
-                  <Text style={styles.detailValue}>{selectedUser.email}</Text>
+                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
+                    {t('admin.users.details.email')}:
+                  </Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{selectedUser.email}</Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>{t('admin.users.details.role')}:</Text>
+                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
+                    {t('admin.users.details.role')}:
+                  </Text>
                   <View style={[styles.roleBadge, { backgroundColor: getRoleColor(selectedUser.role) }]}>
                     <Text style={styles.roleText}>{t(`admin.users.roles.${selectedUser.role}`)}</Text>
                   </View>
                 </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>{t('admin.users.details.recipesPosted')}:</Text>
-                  <Text style={styles.detailValue}>{getUserRecipeCount(selectedUser.id)}</Text>
+                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
+                    {t('admin.users.details.recipesPosted')}:
+                  </Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>{getUserRecipeCount(selectedUser.id)}</Text>
                 </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>{t('admin.users.details.memberSince')}:</Text>
-                  <Text style={styles.detailValue}>
+                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
+                    {t('admin.users.details.memberSince')}:
+                  </Text>
+                  <Text style={[styles.detailValue, { color: colors.text }]}>
                     {selectedUser.createdAt?.toDate?.()?.toLocaleDateString() || t('common.unknown')}
                   </Text>
                 </View>
@@ -257,7 +444,7 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
 
             <View style={styles.modalActions}>
               <TouchableOpacity 
-                style={styles.modalButton}
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={() => setShowUserDialog(false)}
               >
                 <Text style={styles.modalButtonText}>{t('common.close')}</Text>
@@ -267,17 +454,21 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
         </View>
       </Modal>
 
+      {/* Info Dialog */}
       <CustomDialog
-        visible={showDialog}
+        visible={showInfoDialog}
         title={dialogTitle}
         message={dialogMessage}
-        onClose={() => setShowDialog(false)}
+        icon={dialogIcon}
+        onClose={() => setShowInfoDialog(false)}
       />
+
+      {/* Action Dialog */}
+      <ActionDialog />
     </View>
   );
 }
 
-// ... styles remain the same
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -286,13 +477,11 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e9ecef',
   },
   searchIcon: {
     marginRight: 8,
@@ -300,21 +489,19 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
   },
   listContent: {
     paddingBottom: 20,
   },
   userCard: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
+    elevation: 3,
   },
   userHeader: {
     flexDirection: 'row',
@@ -344,16 +531,13 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
   },
   userEmail: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 4,
   },
   userRecipes: {
     fontSize: 12,
-    color: '#999',
     marginBottom: 12,
   },
   actionsRow: {
@@ -366,17 +550,17 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#ddd',
-    backgroundColor: '#f8f9fa',
   },
   activeRoleButton: {
-    backgroundColor: '#f37d1c',
-    borderColor: '#f37d1c',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   roleButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
   },
   activeRoleText: {
     color: '#fff',
@@ -395,15 +579,86 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: '#666',
     textAlign: 'center',
   },
+  // Dialog Styles
+  dialogOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dialogContainer: {
+    width: '85%',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  dialogIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  dialogTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  dialogMessage: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 8,
+  },
+  progressText: {
+    fontSize: 14,
+  },
+  dialogButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  dialogButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButton: {
+    borderWidth: 2,
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  confirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -412,7 +667,6 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 16,
     padding: 20,
     width: '100%',
@@ -423,11 +677,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#333',
   },
   closeButton: {
     padding: 4,
@@ -441,23 +696,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
   },
   detailLabel: {
     fontSize: 14,
-    color: '#666',
     fontWeight: '600',
   },
   detailValue: {
     fontSize: 14,
-    color: '#333',
     fontWeight: '500',
   },
   modalActions: {
     marginTop: 20,
   },
   modalButton: {
-    backgroundColor: '#f37d1c',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',

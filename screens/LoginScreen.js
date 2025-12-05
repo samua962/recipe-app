@@ -1,4 +1,4 @@
-// LoginScreen.js - MULTI-LANGUAGE VERSION
+// LoginScreen.js - WITH DARK THEME SUPPORT
 import React, { useState } from 'react';
 import {
   View,
@@ -7,40 +7,43 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Modal,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  StatusBar,
+  SafeAreaView
 } from 'react-native';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import { Ionicons } from "@expo/vector-icons";
-import { useLanguage } from '../contexts/LanguageContext'; // ADDED
-import LanguageSwitcher from '../components/LanguageSwitcher'; // ADDED
+import { useLanguage } from '../contexts/LanguageContext';
+import LanguageSwitcher from '../components/LanguageSwitcher';
+import { useTheme } from '../contexts/ThemeContext';
+import CustomDialog from '../components/CustomDialog';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  // Custom dialog state
   const [dialogVisible, setDialogVisible] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogMessage, setDialogMessage] = useState('');
+  const [dialogType, setDialogType] = useState('error');
 
-  // ADDED: Multi-language hook
   const { locale, t } = useLanguage();
+  const { colors, isDarkMode } = useTheme();
 
-  const showDialog = (title, message) => {
+  const showDialog = (title, message, type = 'error') => {
     setDialogTitle(title);
     setDialogMessage(message);
+    setDialogType(type);
     setDialogVisible(true);
   };
 
   const handleLogin = async () => {
     if (!email || !password) {
-      showDialog(t('login.errors.title'), t('login.errors.requiredFields'));
+      showDialog(t('login.errors.title'), t('login.errors.requiredFields'), 'error');
       return;
     }
 
@@ -49,19 +52,21 @@ export default function LoginScreen({ navigation }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // ✅ Enforce email verification
       if (!user.emailVerified) {
         await signOut(auth);
-        showDialog(t('login.errors.emailNotVerifiedTitle'), t('login.errors.emailNotVerifiedMessage'));
+        showDialog(
+          t('login.errors.emailNotVerifiedTitle'),
+          t('login.errors.emailNotVerifiedMessage'),
+          'warning'
+        );
         return;
       }
 
       navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
 
     } catch (error) {
-      let errorMessage = error.message;
+      let errorMessage = t('login.errors.generic');
       
-      // ADDED: Localized error messages
       if (error.code === 'auth/invalid-email') {
         errorMessage = t('login.errors.invalidEmail');
       } else if (error.code === 'auth/user-not-found') {
@@ -74,7 +79,7 @@ export default function LoginScreen({ navigation }) {
         errorMessage = t('login.errors.networkError');
       }
       
-      showDialog(t('login.errors.title'), errorMessage);
+      showDialog(t('login.errors.title'), errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -82,194 +87,207 @@ export default function LoginScreen({ navigation }) {
 
   const handleResetPassword = async () => {
     if (!email) {
-      showDialog(t('login.errors.title'), t('login.errors.enterEmailFirst'));
+      showDialog(t('login.errors.title'), t('login.errors.enterEmailFirst'), 'error');
       return;
     }
 
     try {
       await sendPasswordResetEmail(auth, email);
-      showDialog(t('login.resetPassword.successTitle'), t('login.resetPassword.successMessage'));
+      showDialog(
+        t('login.resetPassword.successTitle'),
+        t('login.resetPassword.successMessage'),
+        'success'
+      );
     } catch (error) {
       let errorMessage = error.message;
       
-      // ADDED: Localized error messages for password reset
       if (error.code === 'auth/invalid-email') {
         errorMessage = t('login.errors.invalidEmail');
       } else if (error.code === 'auth/user-not-found') {
         errorMessage = t('login.errors.userNotFound');
       }
       
-      showDialog(t('login.errors.title'), errorMessage);
+      showDialog(t('login.errors.title'), errorMessage, 'error');
     }
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+        backgroundColor={colors.background}
+        translucent={false}
+      />
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
       >
-        {/* Header with Language Switcher */}
-        <View style={styles.header}>
-          <Text style={styles.title}>{t('login.title')}</Text>
-          <Text style={styles.subtitle}>{t('login.subtitle')}</Text>
-          <LanguageSwitcher />
-        </View>
-
-        {/* Email Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>{t('login.email')}</Text>
-          <View style={styles.inputRow}>
-            <Ionicons name="mail-outline" size={20} color="#f37d1cff" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder={t('login.emailPlaceholder')}
-              placeholderTextColor="#999"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoComplete="email"
-            />
-          </View>
-        </View>
-
-        {/* Password Input */}
-        <View style={styles.inputContainer}>
-          <Text style={styles.inputLabel}>{t('login.password')}</Text>
-          <View style={styles.inputRow}>
-            <Ionicons name="lock-closed-outline" size={20} color="#f37d1cff" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder={t('login.passwordPlaceholder')}
-              placeholderTextColor="#999"
-              secureTextEntry={!showPassword}
-              value={password}
-              onChangeText={setPassword}
-              autoCapitalize="none"
-              autoComplete="password"
-            />
-            <TouchableOpacity onPress={() => setShowPassword((s) => !s)} style={styles.eyeButton}>
-              <Ionicons 
-                name={showPassword ? "eye-off-outline" : "eye-outline"} 
-                size={20} 
-                color="#666" 
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Login Button */}
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.buttonText}>{t('login.loginButton')}</Text>
-          )}
-        </TouchableOpacity>
+          {/* Header with Language Switcher */}
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>{t('login.title')}</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('login.subtitle')}</Text>
+            <View style={styles.languageSwitcherContainer}>
+              <LanguageSwitcher />
+            </View>
+          </View>
 
-        {/* Forgot Password */}
-        <TouchableOpacity onPress={handleResetPassword} style={styles.forgotButton}>
-          <Text style={styles.forgotText}>{t('login.forgotPassword')}</Text>
-        </TouchableOpacity>
-
-        {/* Signup Link */}
-        <View style={styles.signupContainer}>
-          <Text style={styles.signupText}>
-            {t('login.noAccount')}{" "}
-          </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-            <Text style={styles.signupLink}>{t('login.signupLink')}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Custom Dialog */}
-        <Modal
-          visible={dialogVisible}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setDialogVisible(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.dialogBox}>
-              <Ionicons
-                name={
-                  dialogTitle.toLowerCase().includes("error") || 
-                  dialogTitle.toLowerCase().includes(t('login.errors.title').toLowerCase())
-                    ? "alert-circle-outline"
-                    : dialogTitle.toLowerCase().includes("verify") ||
-                      dialogTitle.toLowerCase().includes(t('login.errors.emailNotVerifiedTitle').toLowerCase())
-                    ? "mail-outline"
-                    : "checkmark-circle-outline"
-                }
-                size={48}
-                color={
-                  dialogTitle.toLowerCase().includes("error") || 
-                  dialogTitle.toLowerCase().includes(t('login.errors.title').toLowerCase()) ||
-                  dialogTitle.toLowerCase().includes("verify") ||
-                  dialogTitle.toLowerCase().includes(t('login.errors.emailNotVerifiedTitle').toLowerCase())
-                    ? "#ff9800"
-                    : "#4caf50"
-                }
-                style={{ marginBottom: 10 }}
+          {/* Email Input */}
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>{t('login.email')}</Text>
+            <View style={[
+              styles.inputRow,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              }
+            ]}>
+              <Ionicons name="mail-outline" size={20} color={colors.primary} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder={t('login.emailPlaceholder')}
+                placeholderTextColor={colors.placeholder}
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+                editable={!loading}
               />
-              <Text style={styles.dialogTitle}>{dialogTitle}</Text>
-              <Text style={styles.dialogMessage}>{dialogMessage}</Text>
+            </View>
+          </View>
 
-              <TouchableOpacity
-                style={styles.dialogButton}
-                onPress={() => setDialogVisible(false)}
+          {/* Password Input */}
+          <View style={styles.inputContainer}>
+            <Text style={[styles.inputLabel, { color: colors.text }]}>{t('login.password')}</Text>
+            <View style={[
+              styles.inputRow,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+              }
+            ]}>
+              <Ionicons name="lock-closed-outline" size={20} color={colors.primary} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.input, { color: colors.text }]}
+                placeholder={t('login.passwordPlaceholder')}
+                placeholderTextColor={colors.placeholder}
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={setPassword}
+                autoCapitalize="none"
+                autoComplete="password"
+                editable={!loading}
+              />
+              <TouchableOpacity 
+                onPress={() => setShowPassword((s) => !s)} 
+                style={styles.eyeButton}
+                disabled={loading}
               >
-                <Text style={styles.dialogButtonText}>{t('common.ok')}</Text>
+                <Ionicons 
+                  name={showPassword ? "eye-off-outline" : "eye-outline"} 
+                  size={20} 
+                  color={colors.textSecondary} 
+                />
               </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </ScrollView>
-    </KeyboardAvoidingView>
+
+          {/* Login Button */}
+          <TouchableOpacity
+            style={[
+              styles.button, 
+              { backgroundColor: colors.primary },
+              loading && styles.buttonDisabled
+            ]}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.buttonText}>{t('login.loginButton')}</Text>
+            )}
+          </TouchableOpacity>
+
+          {/* Forgot Password */}
+          <TouchableOpacity 
+            onPress={handleResetPassword} 
+            style={styles.forgotButton}
+            disabled={loading}
+          >
+            <Text style={[styles.forgotText, { color: colors.textSecondary }]}>
+              {t('login.forgotPassword')}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Signup Link */}
+          <View style={styles.signupContainer}>
+            <Text style={[styles.signupText, { color: colors.textSecondary }]}>
+              {t('login.noAccount')}{" "}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('Signup')}
+              disabled={loading}
+            >
+              <Text style={[styles.signupLink, { color: colors.primary }]}>
+                {t('login.signupLink')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Custom Dialog */}
+          <CustomDialog
+            visible={dialogVisible}
+            title={dialogTitle}
+            message={dialogMessage}
+            type={dialogType}
+            onClose={() => setDialogVisible(false)}
+            confirmText={t('dialog.ok')}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    backgroundColor: '#fff' 
-  },
   scrollContent: { 
     flexGrow: 1,
     justifyContent: 'center', 
     padding: 24,
+    paddingTop: 10,
+    paddingBottom: 40,
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
+    marginTop: 10,
   },
   title: { 
-    color: '#222', 
     fontSize: 28, 
     fontWeight: '800', 
     marginBottom: 6,
     textAlign: 'center',
   },
   subtitle: { 
-    color: '#666', 
     fontSize: 15, 
     marginBottom: 20,
     textAlign: 'center',
+  },
+  languageSwitcherContainer: {
+    marginTop: 10,
   },
   inputContainer: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: '#333',
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
@@ -278,10 +296,8 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#eee',
     paddingHorizontal: 12,
   },
   inputIcon: { 
@@ -290,14 +306,14 @@ const styles = StyleSheet.create({
   input: { 
     flex: 1, 
     height: 48, 
-    color: '#222',
     fontSize: 16,
+    paddingHorizontal: 4,
   },
   eyeButton: { 
-    padding: 6 
+    padding: 6,
+    marginLeft: 4,
   },
   button: {
-    backgroundColor: '#f37d1cff',
     borderRadius: 12,
     paddingVertical: 16,
     marginTop: 24,
@@ -309,7 +325,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   buttonDisabled: {
-    opacity: 0.8,
+    opacity: 0.6,
   },
   buttonText: { 
     color: '#fff', 
@@ -321,7 +337,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   forgotText: { 
-    color: '#888', 
     fontSize: 14,
     fontWeight: '500',
   },
@@ -332,61 +347,10 @@ const styles = StyleSheet.create({
     marginTop: 32,
   },
   signupText: { 
-    color: '#444', 
     fontSize: 14,
   },
   signupLink: { 
-    color: '#f37d1cff', 
     fontSize: 14,
     fontWeight: '700',
-  },
-
-  // Dialog Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  dialogBox: {
-    backgroundColor: '#fff',
-    padding: 24,
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-  },
-  dialogTitle: { 
-    fontSize: 18, 
-    fontWeight: '700', 
-    marginBottom: 8, 
-    color: '#333',
-    textAlign: 'center',
-  },
-  dialogMessage: { 
-    fontSize: 15, 
-    color: '#666', 
-    textAlign: 'center', 
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  dialogButton: {
-    backgroundColor: '#f37d1cff',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    minWidth: 100,
-  },
-  dialogButtonText: { 
-    color: '#fff', 
-    fontSize: 15, 
-    fontWeight: '700',
-    textAlign: 'center',
   },
 });
