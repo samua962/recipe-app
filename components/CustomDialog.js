@@ -1,7 +1,17 @@
-// components/CustomDialog.js
-import React from "react";
-import { Modal, View, Text, TouchableOpacity, StyleSheet, Animated } from "react-native";
+// components/CustomDialog.js - UPDATED WITH DARK MODE
+import React, { useEffect } from "react";
+import { 
+  Modal, 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  Animated,
+  Keyboard,
+  useColorScheme 
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "../contexts/ThemeContext"; // Import theme hook
 
 export default function CustomDialog({
   visible,
@@ -9,25 +19,118 @@ export default function CustomDialog({
   message,
   icon = "alert-circle-outline",
   onClose,
+  showCancel = false,
+  confirmText = "OK",
+  cancelText = "Cancel",
+  onConfirm,
+  confirmColor,
+  cancelColor,
 }) {
   const scale = new Animated.Value(0.8);
+  const { colors, isDarkMode } = useTheme(); // Get theme colors
 
-  if (visible) {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-  }
+  // Use theme colors if not provided, otherwise use provided colors
+  const finalConfirmColor = confirmColor || colors.primary;
+  const finalCancelColor = cancelColor || colors.textSecondary;
+
+  // Dismiss keyboard when dialog is shown
+  useEffect(() => {
+    if (visible) {
+      Keyboard.dismiss();
+      Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+    } else {
+      scale.setValue(0.8);
+    }
+  }, [visible]);
+
+  const handleConfirm = () => {
+    if (onConfirm) {
+      onConfirm();
+    }
+    onClose();
+  };
+
+  const handleCancel = () => {
+    onClose();
+  };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      {/* 🧡 Removed the black overlay entirely */}
-      <View style={styles.centeredContainer}>
-        <Animated.View style={[styles.dialog, { transform: [{ scale }] }]}>
-          <Ionicons name={icon} size={44} color="#f37d1c" style={{ marginBottom: 12 }} />
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.message}>{message}</Text>
-          <TouchableOpacity style={styles.button} onPress={onClose}>
-            <Text style={styles.buttonText}>OK</Text>
+    <Modal 
+      visible={visible} 
+      transparent 
+      animationType="fade" 
+      onRequestClose={handleCancel}
+    >
+      <View style={[
+        styles.centeredContainer, 
+        { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.85)' }
+      ]}>
+        <TouchableOpacity 
+          style={styles.backgroundTouchable}
+          activeOpacity={1}
+          onPress={handleCancel}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Animated.View style={[
+              styles.dialog, 
+              { 
+                transform: [{ scale }],
+                backgroundColor: colors.card,
+                shadowColor: isDarkMode ? '#000' : '#000',
+              }
+            ]}>
+              <Ionicons 
+                name={icon} 
+                size={44} 
+                color={finalConfirmColor} 
+                style={{ marginBottom: 12 }} 
+              />
+              
+              <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+              
+              <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
+              
+              <View style={styles.buttonContainer}>
+                {showCancel && (
+                  <TouchableOpacity 
+                    style={[
+                      styles.button, 
+                      styles.cancelButton, 
+                      { 
+                        borderColor: finalCancelColor,
+                        backgroundColor: isDarkMode ? 'transparent' : 'transparent'
+                      }
+                    ]}
+                    onPress={handleCancel}
+                  >
+                    <Text style={[styles.buttonText, { color: finalCancelColor }]}>
+                      {cancelText}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.button, 
+                    styles.confirmButton, 
+                    { 
+                      backgroundColor: finalConfirmColor,
+                      shadowColor: isDarkMode ? 'rgba(0,0,0,0.5)' : '#000',
+                    }
+                  ]}
+                  onPress={handleConfirm}
+                >
+                  <Text style={[styles.buttonText, styles.confirmButtonText]}>
+                    {confirmText}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
           </TouchableOpacity>
-        </Animated.View>
+        </TouchableOpacity>
       </View>
     </Modal>
   );
@@ -38,16 +141,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    // ✅ Light gray subtle background instead of black dim
-    backgroundColor: "rgba(255,255,255,0.85)",
+  },
+  backgroundTouchable: {
+    flex: 1,
+    width: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
   dialog: {
     width: "80%",
-    backgroundColor: "#fff",
     borderRadius: 20,
     alignItems: "center",
     padding: 24,
-    shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 },
@@ -56,25 +161,43 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#222",
     marginBottom: 6,
     textAlign: "center",
   },
   message: {
     fontSize: 15,
-    color: "#555",
     textAlign: "center",
     marginBottom: 16,
+    lineHeight: 20,
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    width: "100%",
+    gap: 12,
+    marginTop: 8,
   },
   button: {
-    backgroundColor: "#f37d1c",
+    flex: 1,
     borderRadius: 10,
-    paddingHorizontal: 32,
     paddingVertical: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButton: {
+    borderWidth: 2,
+    backgroundColor: "transparent",
+  },
+  confirmButton: {
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   buttonText: {
-    color: "#fff",
     fontSize: 15,
     fontWeight: "700",
+  },
+  confirmButtonText: {
+    color: "#fff",
   },
 });

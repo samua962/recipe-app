@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/lgo.jpg",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,7 +21,8 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.sam906.myApp"
+      "package": "com.sam906.myApp",
+      "ndkVersion": "36.0.0"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,14 +35,17 @@
     "plugins": [
       "expo-sqlite",
       "expo-asset",
-       [
+      [
         "expo-notifications",
         {
           "icon": "./assets/notification_icon.png",
           "color": "#f37d1c",
-          "sounds": ["./assets/notification_sound.wav"]
+          "sounds": [
+            "./assets/notification_sound.wav"
+          ]
         }
-      ]
+      ],
+      "react-native-video"
     ]
   }
 }

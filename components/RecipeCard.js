@@ -9,7 +9,7 @@ export default function RecipeCard({ recipe, onToggleFavorite, isFavorite }) {
         <Text style={styles.title} numberOfLines={2}>
           {recipe.title}
         </Text>
-        <Text style={styles.meta}>{recipe.time} min  {recipe.category}</Text>
+        <Text style={styles.meta}>{recipe.time} min • {recipe.category}</Text>
         <View style={styles.tagsRow}>
           {recipe.tags?.slice(0, 3).map((t) => (
             <View key={t} style={styles.tag}>

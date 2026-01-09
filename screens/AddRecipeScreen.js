@@ -33,16 +33,9 @@ const CATEGORIES = [
   { en: "Dinner", am: "እራት" },
   { en: "Dessert", am: "ምርጥ ምግብ" },
   { en: "Drinks", am: "መጠጦች" },
-  { en: "Vegetarian", am: "አትክልት ምግብ" },
+  { en: "Vegetarian", am: "አትክልት" },
   { en: "Meat", am: "ስጋ ምግብ" },
-  { en: "Appetizer", am: "መግቢያ ምግብ" },
-  { en: "Soup", am: "ሾርባ" },
-  { en: "Salad", am: "ሰላጣ" },
-  { en: "Bread", am: "ዳቦ" },
-  { en: "Rice", am: "ሩዝ" },
-  { en: "Pasta", am: "ፓስታ" },
-  { en: "Seafood", am: "የባሕር ምግብ" },
-  { en: "Vegan", am: "ቬጋን" }
+  { en: "Appetizer", am: "መግቢያ" }
 ];
 
 // Translation Service (same as before)
@@ -160,7 +153,7 @@ class TranslationService {
       'en-am': {
         // Ingredients
         'salt': 'ጨው',
-        'sugar': 'ሽንኩርት',
+      'sugar': 'ስኳር',
         'water': 'ውሃ',
         'oil': 'ዘይት',
         'butter': 'ቅቤ',

@@ -56,6 +56,7 @@ export const ThemeProvider = ({ children }) => {
       placeholder: isDarkMode ? "#555" : "#ddd",
       overlay: "rgba(0,0,0,0.6)",
       badgeBg: isDarkMode ? "#333" : "#f0f0f0",
+      textDisabled: isDarkMode ? "#666" : "#999",
     },
   };
 

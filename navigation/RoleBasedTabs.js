@@ -7,12 +7,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // Import multi-language hook and theme
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext'; // Import theme hook
+import { useGuest } from '../contexts/GuestContext'; 
+
 
 // Import all screens
 import HomeScreen from '../screens/HomeScreen';
 import ExploreScreen from '../screens/ExploreScreen';
 import FavouritesScreen from '../screens/FavouritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import UserProfileScreen from '../screens/UserProfileScreen'; // ADDED
 import ModeratorDashboard from '../screens/ModeratorDashboard';
 import AdminDashboard from '../screens/AdminDashboard';
 
@@ -35,6 +38,36 @@ const getTabBarStyle = (insets, colors) => ({
   paddingTop: 10,
   marginBottom: 0,
 });
+
+// Create a wrapper component for UserProfileScreen that passes current user ID
+const CurrentUserProfileScreen = ({ navigation, route }) => {
+  const { auth } = require('../firebaseConfig');
+ 
+    const { isGuest } = useGuest();
+if (isGuest) {
+    // Guest users see the ProfileScreen (which we just updated)
+    return <ProfileScreen navigation={navigation} route={route} />;
+  }
+ const currentUser = auth.currentUser;
+  if (!currentUser) {
+    // If not logged in, navigate to login
+    navigation.navigate('Login');
+    return null;
+  }
+  
+  return (
+    <UserProfileScreen 
+      navigation={navigation} 
+      route={{
+        ...route,
+        params: {
+          ...route.params,
+          userId: currentUser.uid
+        }
+      }}
+    />
+  );
+};
 
 // Create a wrapper component that uses the language in the key
 const createTabNavigator = (Component, tabName) => {
@@ -103,7 +136,7 @@ export function UserTabs() {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
+        component={CurrentUserProfileScreen} // CHANGED: From ProfileScreen to CurrentUserProfileScreen
         options={{
           tabBarLabel: t('tabs.profile'),
         }}
@@ -171,7 +204,7 @@ export function ModeratorTabs() {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
+        component={CurrentUserProfileScreen} // CHANGED: From ProfileScreen to CurrentUserProfileScreen
         options={{
           tabBarLabel: t('tabs.profile'),
         }}
@@ -239,7 +272,7 @@ export function AdminTabs() {
       />
       <Tab.Screen 
         name="Profile" 
-        component={ProfileScreen}
+        component={CurrentUserProfileScreen} // CHANGED: From ProfileScreen to CurrentUserProfileScreen
         options={{
           tabBarLabel: t('tabs.profile'),
         }}

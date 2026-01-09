@@ -305,7 +305,7 @@ export default function SignupScreen({ navigation }) {
 
           {/* Login Link */}
           <View style={styles.loginContainer}>
-            <Text style={[styles.loginText, { color: colors.textSecondary }]}>{t('signup.haveAccount')}{" "}</Text>
+            <Text style={[styles.loginText, { color: colors.textSecondary }]}>{t('signup.haveAccount')}</Text>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Login')}
               disabled={loading}
@@ -315,14 +315,30 @@ export default function SignupScreen({ navigation }) {
           </View>
 
           {/* Terms and Privacy */}
-          <View style={styles.termsContainer}>
+          {/* <View style={styles.termsContainer}>
             <Text style={[styles.termsText, { color: colors.textSecondary }]}>
-              {t('signup.termsText')}{" "}
-              <Text style={[styles.termsLink, { color: colors.primary }]}>{t('signup.termsLink')}</Text>{" "}
-              {t('signup.and')}{" "}
+              {t('signup.termsText')}
+              <Text style={[styles.termsLink, { color: colors.primary }]}>{t('signup.termsLink')}</Text>
+              {t('signup.and')}
               <Text style={[styles.termsLink, { color: colors.primary }]}>{t('signup.privacyLink')}</Text>
             </Text>
-          </View>
+          </View> */}
+          <View style={styles.termsContainer}>
+  <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }}>
+    <Text style={[styles.termsText, { color: colors.textSecondary, marginRight: 4 }]}>
+      {t('signup.termsText')}
+    </Text>
+    <Text style={[styles.termsLink, { color: colors.primary, marginRight: 4 }]}>
+      {t('signup.termsLink')}
+    </Text>
+    <Text style={[styles.termsText, { color: colors.textSecondary, marginRight: 4 }]}>
+      {t('signup.and')}
+    </Text>
+    <Text style={[styles.termsLink, { color: colors.primary }]}>
+      {t('signup.privacyLink')}
+    </Text>
+  </View>
+</View>
 
           {/* Custom Dialog */}
           <CustomDialog

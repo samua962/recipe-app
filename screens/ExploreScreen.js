@@ -1,4 +1,4 @@
-// screens/ExploreScreen.js - UPDATED WITH DARK MODE
+// screens/ExploreScreen.js - UPDATED WITH CATEGORY FIXES AND DARK MODE
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -24,10 +24,23 @@ import { LinearGradient } from 'expo-linear-gradient';
 // Import multi-language hooks and theme
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedRecipes } from '../hooks/useLocalizedRecipes';
-import { useTheme } from '../contexts/ThemeContext'; // Import theme hook
+import { useTheme } from '../contexts/ThemeContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 
 const { width, height } = Dimensions.get('window');
+
+// CATEGORY DEFINITIONS - UPDATED TO MATCH AddRecipeScreen
+const CATEGORY_MAP = {
+  // English to Amharic mapping
+  'breakfast': { en: 'Breakfast', am: 'ቁርስ' },
+  'lunch': { en: 'Lunch', am: 'ምሳ' },
+  'dinner': { en: 'Dinner', am: 'እራት' },
+  'dessert': { en: 'Dessert', am: 'ምርጥ ምግብ' },
+  'drinks': { en: 'Drinks', am: 'መጠጦች' },
+  'vegetarian': { en: 'Vegetarian', am: 'አትክልት' },
+  'meat': { en: 'Meat', am: 'ስጋ ምግብ' },
+  'appetizer': { en: 'Appetizer', am: 'መግቢያ' }
+};
 
 export default function ExploreScreen({ navigation }) {
   const [recipes, setRecipes] = useState([]);
@@ -47,13 +60,17 @@ export default function ExploreScreen({ navigation }) {
   // Theme hook
   const { colors, isDarkMode, toggleTheme } = useTheme();
 
+  // UPDATED FILTERS - Include all categories from AddRecipeScreen
   const filters = [
     { id: 'all', name: t('categories.all'), icon: 'grid' },
     { id: 'breakfast', name: t('categories.breakfast'), icon: 'cafe' },
     { id: 'lunch', name: t('categories.lunch'), icon: 'restaurant' },
     { id: 'dinner', name: t('categories.dinner'), icon: 'moon' },
     { id: 'dessert', name: t('categories.dessert'), icon: 'ice-cream' },
+    { id: 'drinks', name: t('categories.drinks'), icon: 'wine' },
     { id: 'vegetarian', name: t('categories.vegetarian'), icon: 'leaf' },
+    { id: 'meat', name: t('categories.meat'), icon: 'pizza' },
+    { id: 'appetizer', name: t('categories.appetizer'), icon: 'fast-food' },
     { id: 'quick', name: t('explore.quick'), icon: 'flash' },
   ];
 
@@ -102,20 +119,50 @@ export default function ExploreScreen({ navigation }) {
     }
   };
 
-  // Helper function to get category as string (handles both single and multi-language)
+  // UPDATED: Better category extraction with fallback logic
   const getCategoryString = (recipe) => {
     if (!recipe.category) return '';
     
-    // If category is stored as multi-language object
+    // Handle multi-language category object
     if (typeof recipe.category === 'object') {
-      return recipe.category[locale] || recipe.category.en || '';
+      // Try to get category in current locale
+      const localizedCategory = recipe.category[locale];
+      if (localizedCategory) return localizedCategory;
+      
+      // Fallback to English
+      if (recipe.category.en) return recipe.category.en;
+      
+      // Fallback to Amharic
+      if (recipe.category.am) return recipe.category.am;
+      
+      return '';
     }
     
     // If category is stored as string (old format)
     return recipe.category || '';
   };
 
-  // Helper function to get title as string (handles both single and multi-language)
+  // UPDATED: Get normalized category for filtering
+  const getNormalizedCategory = (recipe) => {
+    const categoryString = getCategoryString(recipe).toLowerCase();
+    
+    // Try to match against known categories
+    for (const [key, translations] of Object.entries(CATEGORY_MAP)) {
+      // Check if category matches English name
+      if (categoryString === translations.en.toLowerCase()) return key;
+      
+      // Check if category matches Amharic name
+      if (categoryString === translations.am) return key;
+      
+      // Check if category contains keyword
+      if (categoryString.includes(key)) return key;
+    }
+    
+    // Default to empty string if no match
+    return '';
+  };
+
+  // Helper function to get title as string
   const getTitleString = (recipe) => {
     if (!recipe.title) return t('explore.untitledRecipe');
     
@@ -128,7 +175,7 @@ export default function ExploreScreen({ navigation }) {
     return recipe.title || t('explore.untitledRecipe');
   };
 
-  // Helper function to get description as string (handles both single and multi-language)
+  // Helper function to get description as string
   const getDescriptionString = (recipe) => {
     if (!recipe.description) return t('explore.noDescription');
     
@@ -141,29 +188,22 @@ export default function ExploreScreen({ navigation }) {
     return recipe.description || t('explore.noDescription');
   };
 
+  // UPDATED FILTER FUNCTION with proper category matching
   const filterRecipes = () => {
     let filtered = [...recipes];
 
     // Apply search filter
     if (searchQuery) {
+      const queryLower = searchQuery.toLowerCase();
       filtered = filtered.filter(recipe => {
-        const query = searchQuery.toLowerCase();
+        const title = getTitleString(recipe).toLowerCase();
+        const description = getDescriptionString(recipe).toLowerCase();
+        const category = getCategoryString(recipe).toLowerCase();
         
-        // Check title
-        const title = getTitleString(recipe);
-        if (title.toLowerCase().includes(query)) {
-          return true;
-        }
-        
-        // Check description
-        const description = getDescriptionString(recipe);
-        if (description.toLowerCase().includes(query)) {
-          return true;
-        }
-        
-        // Check category
-        const category = getCategoryString(recipe);
-        if (category.toLowerCase().includes(query)) {
+        // Check title, description, and category
+        if (title.includes(queryLower) || 
+            description.includes(queryLower) || 
+            category.includes(queryLower)) {
           return true;
         }
         
@@ -171,14 +211,13 @@ export default function ExploreScreen({ navigation }) {
         if (recipe.ingredients) {
           let ingredientsText = '';
           
-          // Handle both multi-language and single-language ingredients
           if (typeof recipe.ingredients === 'object') {
             ingredientsText = recipe.ingredients[locale] || recipe.ingredients.en || '';
           } else {
             ingredientsText = recipe.ingredients || '';
           }
           
-          if (ingredientsText.toLowerCase().includes(query)) {
+          if (ingredientsText.toLowerCase().includes(queryLower)) {
             return true;
           }
         }
@@ -187,22 +226,25 @@ export default function ExploreScreen({ navigation }) {
       });
     }
 
-    // Apply category filter - FIXED: Handle multi-language categories
+    // Apply category filter with better matching
     if (selectedFilter !== 'all') {
       if (selectedFilter === 'quick') {
         filtered = filtered.filter(recipe => 
           recipe.cookingTime && parseInt(recipe.cookingTime) <= 30
         );
-      } else if (selectedFilter === 'vegetarian') {
-        filtered = filtered.filter(recipe => {
-          const category = getCategoryString(recipe);
-          return recipe.tags?.includes('vegetarian') || 
-                 category.toLowerCase().includes('vegetarian');
-        });
       } else {
         filtered = filtered.filter(recipe => {
-          const category = getCategoryString(recipe);
-          return category.toLowerCase() === selectedFilter.toLowerCase();
+          const normalizedCategory = getNormalizedCategory(recipe);
+          
+          // Special handling for vegetarian
+          if (selectedFilter === 'vegetarian') {
+            return normalizedCategory === 'vegetarian' || 
+                   recipe.tags?.includes('vegetarian') ||
+                   getCategoryString(recipe).toLowerCase().includes('vegetarian');
+          }
+          
+          // Match against normalized category
+          return normalizedCategory === selectedFilter;
         });
       }
     }
@@ -504,7 +546,7 @@ export default function ExploreScreen({ navigation }) {
           </View>
         </View>
 
-        {/* Quick Filters */}
+        {/* Quick Filters - Now includes all categories */}
         <View style={styles.filtersSection}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('explore.quickFilters')}</Text>
           <FlatList
@@ -646,17 +688,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 20,
   },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-    paddingHorizontal: 20,
-  },
-  seeAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
   filtersContainer: {
     paddingHorizontal: 20,
   },
@@ -679,17 +710,6 @@ const styles = StyleSheet.create({
   },
   activeFilterText: {
     color: "#fff",
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  metaText: {
-    color: '#fff',
-    fontSize: 12,
-    marginLeft: 4,
-    fontWeight: '500',
   },
   resultsSection: {
     paddingHorizontal: 20,

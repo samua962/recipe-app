@@ -1,3 +1,4 @@
+// screens/HomeScreen.js - UPDATED WITH GUEST DIALOG
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -18,7 +19,11 @@ import { db } from "../firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocalizedRecipes } from "../hooks/useLocalizedRecipes";
-import { useTheme } from "../contexts/ThemeContext"; // Import theme hook
+import { useTheme } from "../contexts/ThemeContext";
+//import GuestRestrictionDialog from "../components/GuestRestrictionDialog";
+import GuestRestrictionDialog from "../components/GuestRestrictionDialog ";
+import useGuestRestriction from "../hooks/useGuestRestriction";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -30,16 +35,17 @@ export default function HomeScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
   
   // Categories with translation keys
-  const categories = [
-    { key: "all", value: "All" },
-    { key: "breakfast", value: "Breakfast" },
-    { key: "lunch", value: "Lunch" },
-    { key: "dinner", value: "Dinner" },
-    { key: "dessert", value: "Dessert" },
-    { key: "drinks", value: "Drinks" },
-    { key: "vegetarian", value: "Vegetarian" },
-    { key: "meat", value: "Meat" }
-  ];
+ const categories = [
+  { key: "all", value: "All" },
+  { key: "breakfast", value: "Breakfast" },
+  { key: "lunch", value: "Lunch" },
+  { key: "dinner", value: "Dinner" },
+  { key: "dessert", value: "Dessert" },
+  { key: "drinks", value: "Drinks" },
+  { key: "vegetarian", value: "Vegetarian" },
+  { key: "meat", value: "Meat" },
+  { key: "appetizer", value: "Appetizer" }  
+];
   
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   
@@ -50,22 +56,20 @@ export default function HomeScreen({ navigation }) {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
-  // Multi-language hooks
+  // Hooks
   const { locale, t } = useLanguage();
   const { getLocalizedRecipes, getLocalizedRecipe } = useLocalizedRecipes();
-  
-  // Theme hook
-  const { colors, isDarkMode, toggleTheme } = useTheme(); // Added toggleTheme
+  const { colors, isDarkMode } = useTheme();
+  const { showGuestRestriction, GuestDialogProps } = useGuestRestriction();
 
   useEffect(() => {
     loadRecipes();
   }, []);
 
-  // Featured recipe rotation with enhanced animations
+  // Featured recipe rotation
   useEffect(() => {
     if (recipes.length > 0) {
       intervalRef.current = setInterval(() => {
-        // Start scale down and fade out
         Animated.parallel([
           Animated.timing(scaleAnim, {
             toValue: 0.9,
@@ -83,10 +87,8 @@ export default function HomeScreen({ navigation }) {
             useNativeDriver: true,
           }),
         ]).start(() => {
-          // Update index after animation completes
           setFeaturedIndex((prev) => (prev + 1) % recipes.length);
           
-          // Reset animation values and animate in
           scaleAnim.setValue(1.1);
           slideAnim.setValue(50);
           Animated.parallel([
@@ -142,17 +144,37 @@ export default function HomeScreen({ navigation }) {
 
   // Category filter
   const handleCategorySelect = (category) => {
-    setSelectedCategory(category);
-    if (category.value === "All") {
-      setFilteredRecipes(recipes);
-    } else {
-      const localizedRecipes = getLocalizedRecipes(recipes);
-      const filtered = localizedRecipes.filter(
-        (r) => r.category?.toLowerCase() === category.value.toLowerCase()
+  setSelectedCategory(category);
+  if (category.value === "All") {
+    setFilteredRecipes(recipes);
+  } else {
+    const localizedRecipes = getLocalizedRecipes(recipes);
+    const filtered = localizedRecipes.filter((r) => {
+      const recipeCategory = r.category?.toLowerCase();
+      const selectedCategoryValue = category.value.toLowerCase();
+      
+      // Map Amharic categories to English for comparison
+      const amharicToEnglishMap = {
+        "ቁርስ": "breakfast",
+        "ምሳ": "lunch",
+        "እራት": "dinner",
+        "ምርጥ ምግብ": "dessert",
+        "መጠጦች": "drinks",
+        "አትክልት": "vegetarian",
+        "ስጋ ምግብ": "meat",
+        "መግቢያ": "appetizer"
+      };
+      
+      // Check if recipe category matches in either language
+      return (
+        recipeCategory === selectedCategoryValue ||
+        amharicToEnglishMap[recipeCategory] === selectedCategoryValue ||
+        recipeCategory === amharicToEnglishMap[selectedCategoryValue]
       );
-      setFilteredRecipes(filtered);
-    }
-  };
+    });
+    setFilteredRecipes(filtered);
+  }
+};
 
   // Helper function to get image source
   const getImageSource = (item) => {
@@ -162,6 +184,28 @@ export default function HomeScreen({ navigation }) {
       return { uri: item.imageURL };
     } else {
       return require('../assets/placeholder-image.jpg');
+    }
+  };
+
+  // Handle notification button press
+  const handleNotificationPress = () => {
+    if (showGuestRestriction(
+      t('profile.notifications'),
+      t('home.guest.notificationsTitle'),
+      t('home.guest.notificationsMessage')
+    )) {
+      navigation.navigate("Notifications");
+    }
+  };
+
+  // Handle add recipe button press
+  const handleAddRecipePress = () => {
+    if (showGuestRestriction(
+      t('recipe.add'),
+      t('home.guest.addRecipeTitle'),
+      t('home.guest.addRecipeMessage')
+    )) {
+      navigation.navigate("AddRecipe");
     }
   };
 
@@ -249,7 +293,7 @@ export default function HomeScreen({ navigation }) {
     );
   }
 
-  // Get the current featured recipe and localize it
+  // Get the current featured recipe
   const featuredRecipe = recipes[featuredIndex] ? getLocalizedRecipe(recipes[featuredIndex]) : null;
 
   return (
@@ -270,29 +314,42 @@ export default function HomeScreen({ navigation }) {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Ionicons name="menu-outline" size={28} color={colors.text} />
+          <TouchableOpacity 
+            onPress={() => navigation.navigate('SettingsProfile')}
+          >
+            <Ionicons name="menu-outline" size={28} color={colors.text} />
+          </TouchableOpacity>
           <Text style={[styles.logo, { color: colors.primary }]}>{t('home.title')}</Text>
           <View style={styles.headerRight}>
-            {/* Dark Mode Toggle Button */}
+             
             <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={toggleTheme} // Added toggleTheme here
+              style={styles.notificationButton}
+              onPress={handleNotificationPress}
             >
-              <Ionicons 
-                name={isDarkMode ? "sunny" : "moon"} 
-                size={24} 
-                color={colors.text} 
-              />
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={() => navigation.navigate('Notifications')}
-            >
+             
               <Ionicons name="notifications-outline" size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
+            <LanguageSwitcher />
         </View>
+
+        {/* Guest Info Banner */}
+        {GuestDialogProps.isGuest && (
+          <View style={[styles.guestInfoBanner, { backgroundColor: 'rgba(149, 165, 166, 0.1)' }]}>
+            <Ionicons name="information-circle-outline" size={20} color="#95a5a6" />
+            <Text style={[styles.guestInfoText, { color: '#95a5a6' }]}>
+              {t('home.guest.bannerMessage')}
+            </Text>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate("Login")}
+              style={[styles.guestSignupButton, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.guestSignupButtonText}>
+                {t('home.guest.signupButton')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Featured Recipe Section */}
         {featuredRecipe && (
@@ -331,15 +388,15 @@ export default function HomeScreen({ navigation }) {
                   <View style={styles.featuredMeta}>
                     <View style={styles.metaItem}>
                       <Ionicons name="time-outline" size={16} color="#fff" />
-                      <Text style={styles.featuredText}> {featuredRecipe.cookingTime || '30'} {t('recipe.minutes')}</Text>
+                      <Text style={styles.featuredText}>{featuredRecipe.cookingTime || '30'} {t('recipe.minutes')}</Text>
                     </View>
                     <View style={styles.metaItem}>
                       <Ionicons name="restaurant-outline" size={16} color="#fff" />
-                      <Text style={styles.featuredText}> {featuredRecipe.category}</Text>
+                      <Text style={styles.featuredText}>{featuredRecipe.category}</Text>
                     </View>
                     <View style={styles.metaItem}>
                       <Ionicons name="person-outline" size={16} color="#fff" />
-                      <Text style={styles.featuredText}> {featuredRecipe.servings || '4'} {t('recipe.servingsUnit')}</Text>
+                      <Text style={styles.featuredText}>{featuredRecipe.servings || '4'} {t('recipe.servingsUnit')}</Text>
                     </View>
                   </View>
                 </View>
@@ -413,13 +470,16 @@ export default function HomeScreen({ navigation }) {
       {/* Floating Add Button */}
       <TouchableOpacity
         style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={() => navigation.navigate("AddRecipe")}
+        onPress={handleAddRecipePress}
         activeOpacity={0.9}
       >
-        <Animated.View style={styles.addButtonInner}>
+        <View style={styles.addButtonInner}>
           <Ionicons name="add" size={28} color="#fff" />
-        </Animated.View>
+        </View>
       </TouchableOpacity>
+
+      {/* Guest Restriction Dialog */}
+      <GuestRestrictionDialog {...GuestDialogProps} />
     </SafeAreaView>
   );
 }
@@ -447,8 +507,32 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
   },
-  menuItem: {
+  notificationButton: {
     padding: 4,
+  },
+  guestInfoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 10,
+    gap: 10,
+  },
+  guestInfoText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  guestSignupButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  guestSignupButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
   },
   featuredSection: {
     marginBottom: 25,

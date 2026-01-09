@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// screens/RecipeDetailScreen.js
+import React, { useEffect, useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,7 +9,6 @@ import {
   TouchableOpacity,
   TextInput,
   Linking,
-  Alert,
   ActivityIndicator,
   Dimensions,
   Modal,
@@ -53,14 +53,10 @@ export default function RecipeDetailScreen({ route }) {
   const user = auth.currentUser;
   const navigation = useNavigation();
   
-  // Multi-language hooks
   const { currentLanguage, t } = useLanguage();
   const { getLocalizedRecipe } = useLocalizedRecipes();
-  
-  // Theme hook
   const { colors } = useTheme();
   
-  // Get localized recipe
   const recipe = getLocalizedRecipe(originalRecipe);
   
   const [isFav, setIsFav] = useState(false);
@@ -72,21 +68,72 @@ export default function RecipeDetailScreen({ route }) {
   const [avgRating, setAvgRating] = useState(0);
   const [totalRatings, setTotalRatings] = useState(0);
   const [loadingRating, setLoadingRating] = useState(true);
+  const [thumbnailLoading, setThumbnailLoading] = useState(true);
+  const [authorData, setAuthorData] = useState(null);
+  const [loadingAuthor, setLoadingAuthor] = useState(false);
+  const [currentUserProfile, setCurrentUserProfile] = useState(null);
+  const [authorLoaded, setAuthorLoaded] = useState(false);
   
-  // Progress and Dialog states
   const [showProgress, setShowProgress] = useState(false);
   const [progressText, setProgressText] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [dialogConfig, setDialogConfig] = useState({
     title: "",
     message: "",
-    type: "info", // 'info', 'success', 'error', 'confirm'
+    type: "info",
     onConfirm: null,
     onCancel: null,
   });
 
-  // Check if recipe is approved
   const isApproved = recipe.approved === true;
+
+  // Load current user profile
+  useEffect(() => {
+    const loadCurrentUserProfile = async () => {
+      if (user) {
+        try {
+          const userRef = doc(db, "users", user.uid);
+          const userSnap = await getDoc(userRef);
+          if (userSnap.exists()) {
+            setCurrentUserProfile(userSnap.data());
+          }
+        } catch (error) {
+          console.error("Error loading current user profile:", error);
+        }
+      }
+    };
+    loadCurrentUserProfile();
+  }, [user]);
+
+  // Load author profile - FIXED with useCallback to prevent infinite loop
+  const loadAuthorProfile = useCallback(async () => {
+    // Get author ID from recipe (try multiple possible fields)
+    const authorId = recipe.authorId || recipe.userId;
+    
+    if (!authorId || authorLoaded) {
+      return;
+    }
+    
+    setLoadingAuthor(true);
+    try {
+      const authorRef = doc(db, "users", authorId);
+      const authorSnap = await getDoc(authorRef);
+      
+      if (authorSnap.exists()) {
+        setAuthorData(authorSnap.data());
+      }
+      setAuthorLoaded(true);
+    } catch (error) {
+      console.error("Error loading author profile:", error);
+      setAuthorLoaded(true);
+    } finally {
+      setLoadingAuthor(false);
+    }
+  }, [recipe.authorId, recipe.userId, authorLoaded]);
+
+  useEffect(() => {
+    loadAuthorProfile();
+  }, [loadAuthorProfile]);
 
   // Custom Dialog Component
   const CustomDialog = () => (
@@ -109,7 +156,7 @@ export default function RecipeDetailScreen({ route }) {
               color={
                 dialogConfig.type === 'success' ? '#4CAF50' :
                 dialogConfig.type === 'error' ? '#F44336' :
-                dialogConfig.type === 'confirm' ? '#FFA000' : '#FF9800' // Changed info to orange
+                dialogConfig.type === 'confirm' ? '#FFA000' : '#FF9800'
               } 
             />
             <Text style={[styles.dialogTitle, { color: colors.text }]}>
@@ -157,7 +204,6 @@ export default function RecipeDetailScreen({ route }) {
     </Modal>
   );
 
-  // Progress Modal Component
   const ProgressModal = () => (
     <Modal
       visible={showProgress}
@@ -175,7 +221,6 @@ export default function RecipeDetailScreen({ route }) {
     </Modal>
   );
 
-  // Helper function to show dialog
   const showCustomDialog = (title, message, type = "info", onConfirm = null, onCancel = null) => {
     setDialogConfig({
       title,
@@ -187,19 +232,16 @@ export default function RecipeDetailScreen({ route }) {
     setShowDialog(true);
   };
 
-  // Helper function to show progress
   const showProgressBar = (text) => {
     setProgressText(text);
     setShowProgress(true);
   };
 
-  // Helper function to hide progress
   const hideProgressBar = () => {
     setShowProgress(false);
     setProgressText("");
   };
 
-  // Helper function to get localized text
   const getLocalizedText = (text) => {
     if (!text) return '';
     
@@ -214,7 +256,6 @@ export default function RecipeDetailScreen({ route }) {
     return String(text);
   };
 
-  // Helper function to get image source
   const getImageSource = () => {
     if (recipe.imageBase64) {
       return { uri: `data:image/jpeg;base64,${recipe.imageBase64}` };
@@ -225,10 +266,9 @@ export default function RecipeDetailScreen({ route }) {
     }
   };
 
-  // Format ingredients and steps with proper line breaks using localized text
   const formatTextWithLineBreaks = (text) => {
     const localizedText = getLocalizedText(text);
-    if (!localizedText) return '';
+    if (!localizedText) return null;
     
     return localizedText.split('\n').map((line, index) => (
       <Text key={index} style={[styles.textLine, { color: colors.text }]}>
@@ -237,7 +277,7 @@ export default function RecipeDetailScreen({ route }) {
     ));
   };
 
-  // Initialize local DB and check favourite - WITHOUT PROGRESS BAR
+  // Initialize local DB and check favourite
   useEffect(() => {
     const setupDB = async () => {
       try {
@@ -365,14 +405,14 @@ export default function RecipeDetailScreen({ route }) {
     fetchUserRole();
   }, [user]);
 
-  // Load comments (real-time)
+  // Load comments (real-time) and fetch user profiles
   useEffect(() => {
     const q = query(
       collection(db, "comments"),
       where("recipeId", "==", recipe.id),
       orderBy("timestamp", "desc")
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
       const commentList = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -383,7 +423,7 @@ export default function RecipeDetailScreen({ route }) {
     return unsubscribe;
   }, []);
 
-  // Load ratings - WITHOUT PROGRESS BAR
+  // Load ratings
   useEffect(() => {
     const loadRatings = async () => {
       try {
@@ -423,10 +463,24 @@ export default function RecipeDetailScreen({ route }) {
 
     showProgressBar(t('comments.adding'));
     try {
+      // Get current user profile
+      let username = user.email?.split("@")[0] || "Anonymous";
+      let profilePhoto = null;
+      let displayName = username;
+      
+      if (currentUserProfile) {
+        displayName = currentUserProfile.name || 
+                     currentUserProfile.displayName || 
+                     displayName;
+        profilePhoto = currentUserProfile.profilePhoto || null;
+      }
+
       await addDoc(collection(db, "comments"), {
         recipeId: recipe.id,
         userId: user.uid,
-        username: user.email?.split("@")[0] || "Anonymous",
+        username: displayName,
+        profilePhoto: profilePhoto,
+        userEmail: user.email,
         text: newComment.trim(),
         timestamp: new Date(),
       });
@@ -502,41 +556,206 @@ export default function RecipeDetailScreen({ route }) {
     }
   };
 
-  const openYouTube = () => {
+  // Helper function to extract YouTube Video ID
+  const getYouTubeVideoId = (url) => {
+    if (!url) return null;
+    
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/|youtube\.com\/watch\?.*v=)([^#\&\?]{11})/,
+      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+    
+    return null;
+  };
+
+  const getYouTubeThumbnail = (videoId) => {
+    return `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+  };
+
+  const handleThumbnailLoad = () => {
+    setThumbnailLoading(false);
+  };
+
+  const handleThumbnailError = () => {
+    setThumbnailLoading(false);
+  };
+
+  const openYouTubeVideo = () => {
     if (recipe.videoURL) {
-      showProgressBar(t('recipe.openingVideo'));
-      Linking.openURL(recipe.videoURL)
-        .then(() => {
-          setTimeout(() => hideProgressBar(), 1000);
+      const youtubeAppUrl = recipe.videoURL.replace('youtube.com', 'youtube.com');
+      
+      Linking.canOpenURL(youtubeAppUrl)
+        .then((supported) => {
+          if (supported) {
+            return Linking.openURL(youtubeAppUrl);
+          } else {
+            return Linking.openURL(recipe.videoURL);
+          }
         })
-        .catch(() => {
-          hideProgressBar();
+        .catch((err) => {
+          console.error('Failed to open YouTube:', err);
           showCustomDialog(
-            t('errors.noVideo'),
-            t('errors.noVideoLink'),
+            t('app.error'),
+            t('errors.cannotOpenVideo'),
             'error'
           );
         });
-    } else {
-      showCustomDialog(
-        t('errors.noVideo'),
-        t('errors.noVideoLink'),
-        'error'
-      );
     }
   };
 
-  // Check if description exists and is not empty
   const hasDescription = recipe.description && 
                         getLocalizedText(recipe.description).trim().length > 0;
 
+  // Format date for display
+  const formatDate = (date) => {
+    if (!date) return '';
+    
+    try {
+      const d = date.toDate ? date.toDate() : new Date(date);
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return '';
+    }
+  };
+
+  // Format date for comments
+  const formatCommentDate = (timestamp) => {
+    if (!timestamp) return '';
+    
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      const now = new Date();
+      const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+      
+      if (diffInHours < 24) {
+        if (diffInHours === 0) {
+          const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+          if (diffInMinutes === 0) {
+            return t('comments.justNow');
+          }
+          return `${diffInMinutes} ${t('comments.minutesAgo')}`;
+        }
+        return `${diffInHours} ${t('comments.hoursAgo')}`;
+      }
+      
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch (error) {
+      return '';
+    }
+  };
+
+  // Navigate to author profile
+  const navigateToAuthorProfile = () => {
+    const authorId = recipe.authorId || recipe.userId;
+    if (authorId) {
+      navigation.navigate('UserProfile', { userId: authorId });
+    }
+  };
+
+  // Get author display name
+  const getAuthorDisplayName = () => {
+    // Priority 1: From loaded author profile
+    if (authorData?.name || authorData?.displayName) {
+      return authorData.name || authorData.displayName;
+    }
+    
+    // Priority 2: From recipe fields (fallback from admin dashboard)
+    if (recipe.authorName) {
+      return recipe.authorName;
+    }
+    
+    // Priority 3: From email in recipe
+    if (recipe.authorEmail) {
+      return recipe.authorEmail.split("@")[0];
+    }
+    
+    // Priority 4: Default
+    return t('recipe.anonymousAuthor');
+  };
+
+  // Get author initials
+  const getAuthorInitials = () => {
+    const name = getAuthorDisplayName();
+    if (!name) return "A";
+    return name.charAt(0).toUpperCase();
+  };
+
+  // Render author section
+  const renderAuthorSection = () => {
+    const authorId = recipe.authorId || recipe.userId;
+    
+    if (!authorId) {
+      return null;
+    }
+    
+    return (
+      <TouchableOpacity 
+        style={[styles.authorSection, { backgroundColor: colors.card }]}
+        onPress={navigateToAuthorProfile}
+        activeOpacity={0.7}
+        disabled={loadingAuthor}
+      >
+        <View style={styles.authorInfo}>
+          {loadingAuthor ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <>
+              <View style={styles.authorAvatarContainer}>
+                {authorData?.profilePhoto ? (
+                  <Image 
+                    source={{ uri: authorData.profilePhoto }} 
+                    style={styles.authorProfileImage}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View style={[styles.authorAvatar, { backgroundColor: colors.primary }]}>
+                    <Text style={styles.authorInitials}>
+                      {getAuthorInitials()}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.authorDetails}>
+                <Text style={[styles.authorLabel, { color: colors.textSecondary }]}>
+                  {t('recipe.createdBy')}
+                </Text>
+                <Text style={[styles.authorName, { color: colors.text }]}>
+                  {getAuthorDisplayName()}
+                </Text>
+                {recipe.createdAt && (
+                  <Text style={[styles.recipeDate, { color: colors.textSecondary }]}>
+                    {formatDate(recipe.createdAt)}
+                  </Text>
+                )}
+              </View>
+            </>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <ScrollView style={[styles.container, { backgroundColor: colors.background }]} showsVerticalScrollIndicator={false}>
-      {/* Custom Dialogs */}
       <CustomDialog />
       <ProgressModal />
       
-      {/* Recipe Image with Gradient Overlay */}
       <View style={styles.imageContainer}>
         <Image source={getImageSource()} style={styles.image} />
         <LinearGradient
@@ -544,7 +763,6 @@ export default function RecipeDetailScreen({ route }) {
           style={styles.imageGradient}
         />
         
-        {/* Header Actions */}
         <View style={styles.headerActions}>
           <TouchableOpacity 
             style={styles.backButton} 
@@ -553,7 +771,6 @@ export default function RecipeDetailScreen({ route }) {
             <Ionicons name="chevron-back" size={28} color="#fff" />
           </TouchableOpacity>
           <View style={styles.headerRight}>
-            {/* Show favourite button only for approved recipes */}
             {isApproved && (
               <TouchableOpacity style={styles.favButton} onPress={handleSaveFavourite}>
                 <Ionicons 
@@ -567,7 +784,6 @@ export default function RecipeDetailScreen({ route }) {
         </View>
       </View>
 
-      {/* Recipe Content */}
       <View style={[styles.contentContainer, { backgroundColor: colors.background }]}>
         {/* Title and Category */}
         <View style={styles.titleSection}>
@@ -576,6 +792,9 @@ export default function RecipeDetailScreen({ route }) {
             <Text style={styles.categoryText}>{getLocalizedText(recipe.category)}</Text>
           </View>
         </View>
+
+        {/* Author Section - NEW */}
+        {renderAuthorSection()}
 
         {/* Recipe Meta Info */}
         <View style={styles.metaContainer}>
@@ -599,7 +818,7 @@ export default function RecipeDetailScreen({ route }) {
           )}
         </View>
 
-        {/* Description - Always show section, with fallback text if no description */}
+        {/* Description */}
         <View style={[styles.descriptionSection, { backgroundColor: colors.card }]}>
           <Text style={[styles.descriptionText, { color: colors.text }]}>
             {hasDescription 
@@ -666,22 +885,63 @@ export default function RecipeDetailScreen({ route }) {
           </View>
         </View>
 
-        {/* YouTube Video Button - Only show for approved recipes */}
+        {/* YouTube Video */}
         {isApproved && recipe.videoURL && (
-          <TouchableOpacity onPress={openYouTube} style={styles.videoButton}>
-            <LinearGradient 
-              colors={[colors.primary, '#ff9d4d']} 
-              style={styles.videoGradient}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-            >
-              <Ionicons name="logo-youtube" size={24} color="#fff" />
-              <Text style={styles.videoText}>{t('recipe.watchVideo')}</Text>
-            </LinearGradient>
-          </TouchableOpacity>
+          <View style={styles.videoPlayerContainer}>
+            {(() => {
+              const videoId = getYouTubeVideoId(recipe.videoURL);
+              if (videoId) {
+                return (
+                  <TouchableOpacity 
+                    style={styles.videoThumbnailContainer}
+                    onPress={openYouTubeVideo}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.videoThumbnailWrapper}>
+                      {thumbnailLoading && (
+                        <View style={styles.thumbnailLoading}>
+                          <ActivityIndicator size="large" color={colors.primary} />
+                        </View>
+                      )}
+                      <Image
+                        source={{ uri: getYouTubeThumbnail(videoId) }}
+                        style={styles.videoThumbnail}
+                        resizeMode="cover"
+                        onLoad={handleThumbnailLoad}
+                        onError={handleThumbnailError}
+                      />
+                      <LinearGradient
+                        colors={['transparent', 'rgba(0,0,0,0.6)']}
+                        style={styles.videoGradient}
+                      />
+                      <View style={styles.videoOverlay}>
+                        <View style={styles.playButtonContainer}>
+                          <Ionicons name="play-circle" size={70} color="#FF0000" />
+                        </View>
+                        <Text style={styles.watchText}>{t('recipe.watchVideo')}</Text>
+                        <Text style={styles.youtubeText}>YouTube</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              } else {
+                return (
+                  <TouchableOpacity 
+                    style={[styles.invalidUrlContainer, { backgroundColor: colors.card }]}
+                    onPress={() => Linking.openURL(recipe.videoURL)}
+                  >
+                    <Ionicons name="logo-youtube" size={24} color="#FF0000" />
+                    <Text style={[styles.invalidUrlText, { color: colors.text }]}>
+                      {t('recipe.watchOnYouTube')}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }
+            })()}
+          </View>
         )}
 
-        {/* Comments Section - Only show for approved recipes */}
+        {/* Comments Section */}
         {isApproved && (
           <View style={styles.commentSection}>
             <View style={styles.sectionHeader}>
@@ -697,53 +957,101 @@ export default function RecipeDetailScreen({ route }) {
                 <Text style={[styles.noCommentsText, { color: colors.textSecondary }]}>{t('comments.noComments')}</Text>
               </View>
             ) : (
-              comments.map((c) => (
-                <View key={c.id} style={[styles.commentBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <View style={styles.commentHeader}>
-                    <View style={styles.commentUserInfo}>
-                      <View style={[styles.userAvatar, { backgroundColor: colors.primary }]}>
-                        <Text style={styles.avatarText}>
-                          {c.username?.charAt(0)?.toUpperCase() || "U"}
-                        </Text>
-                      </View>
-                      <View>
-                        <Text style={[styles.commentUser, { color: colors.text }]}>{c.username || "Anonymous"}</Text>
-                        <Text style={[styles.commentTime, { color: colors.textSecondary }]}>
-                          {c.timestamp?.toDate ? new Date(c.timestamp.toDate()).toLocaleDateString() : 'Unknown date'}
-                        </Text>
-                      </View>
-                    </View>
-                    {(user?.uid === c.userId || ["moderator", "admin"].includes(userRole)) && (
+              comments.map((c) => {
+                const displayName = c.username || c.userEmail?.split("@")[0] || "Anonymous";
+                const profilePhoto = c.profilePhoto;
+                
+                return (
+                  <View key={c.id} style={[styles.commentBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={styles.commentHeader}>
                       <TouchableOpacity 
-                        onPress={() => handleDeleteComment(c.id)}
-                        style={styles.deleteButton}
+                        style={styles.commentUserInfo}
+                        onPress={() => navigation.navigate('UserProfile', { userId: c.userId })}
+                        activeOpacity={0.7}
                       >
-                        <Ionicons name="trash-outline" size={18} color={colors.textSecondary} />
+                        {profilePhoto ? (
+                          <Image 
+                            source={{ uri: profilePhoto }} 
+                            style={styles.userProfileImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={[styles.userAvatar, { backgroundColor: colors.primary }]}>
+                            <Text style={styles.avatarText}>
+                              {displayName?.charAt(0)?.toUpperCase() || "U"}
+                            </Text>
+                          </View>
+                        )}
+                        <View>
+                          <Text style={[styles.commentUser, { color: colors.text }]}>{displayName}</Text>
+                          <Text style={[styles.commentTime, { color: colors.textSecondary }]}>
+                            {formatCommentDate(c.timestamp)}
+                          </Text>
+                        </View>
                       </TouchableOpacity>
-                    )}
+                      {(user?.uid === c.userId || ["moderator", "admin"].includes(userRole)) && (
+                        <TouchableOpacity 
+                          onPress={() => handleDeleteComment(c.id)}
+                          style={styles.deleteButton}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={colors.textSecondary} />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <Text style={[styles.commentText, { color: colors.text }]}>{c.text}</Text>
                   </View>
-                  <Text style={[styles.commentText, { color: colors.text }]}>{c.text}</Text>
-                </View>
-              ))
+                );
+              })
             )}
 
             {/* Add Comment */}
             <View style={[styles.commentInputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <TextInput
-                style={[styles.commentInput, { color: colors.text }]}
-                placeholder={t('comments.addPlaceholder')}
-                placeholderTextColor={colors.textSecondary}
-                value={newComment}
-                onChangeText={setNewComment}
-                multiline
-              />
+              <View style={styles.commentInputWrapper}>
+                {user ? (
+                  <>
+                    {currentUserProfile?.profilePhoto ? (
+                      <Image 
+                        source={{ uri: currentUserProfile.profilePhoto }} 
+                        style={styles.currentUserProfileImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.currentUserAvatar, { backgroundColor: colors.primary }]}>
+                        <Text style={styles.currentAvatarText}>
+                          {currentUserProfile?.name?.charAt(0)?.toUpperCase() || 
+                           currentUserProfile?.displayName?.charAt(0)?.toUpperCase() ||
+                           user.email?.charAt(0)?.toUpperCase() || "U"}
+                        </Text>
+                      </View>
+                    )}
+                    <TextInput
+                      style={[styles.commentInput, { color: colors.text }]}
+                      placeholder={t('comments.addPlaceholder')}
+                      placeholderTextColor={colors.textSecondary}
+                      value={newComment}
+                      onChangeText={setNewComment}
+                      multiline
+                    />
+                  </>
+                ) : (
+                  <TextInput
+                    style={[styles.commentInput, { color: colors.text }]}
+                    placeholder={t('comments.loginToComment')}
+                    placeholderTextColor={colors.textSecondary}
+                    value={newComment}
+                    onChangeText={setNewComment}
+                    multiline
+                    editable={false}
+                  />
+                )}
+              </View>
               <TouchableOpacity 
                 onPress={handleAddComment}
                 style={[
                   styles.sendButton,
                   { backgroundColor: newComment.trim() ? colors.primary : colors.border }
                 ]}
-                disabled={!newComment.trim()}
+                disabled={!newComment.trim() || !user}
               >
                 <Ionicons name="send" size={20} color="#fff" />
               </TouchableOpacity>
@@ -827,6 +1135,75 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 14,
+  },
+  // Author Section Styles - NEW
+  authorSection: {
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  authorInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  authorAvatarContainer: {
+    marginRight: 12,
+  },
+  authorProfileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  authorAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  authorInitials: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 20,
+  },
+  authorDetails: {
+    flex: 1,
+  },
+  authorLabel: {
+    fontSize: 12,
+    marginBottom: 2,
+  },
+  authorName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 4,
+  },
+  recipeDate: {
+    fontSize: 12,
+    fontStyle: "italic",
   },
   metaContainer: {
     flexDirection: "row",
@@ -914,29 +1291,101 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     textAlign: "center",
   },
-  videoButton: {
+  // YouTube Thumbnail Styles
+  videoPlayerContainer: {
     marginVertical: 10,
     borderRadius: 12,
-    overflow: "hidden",
-    shadowColor: "#f37d1c",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    overflow: 'hidden',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  videoThumbnailContainer: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  videoThumbnailWrapper: {
+    position: 'relative',
+    height: Math.floor((width - 40) * (9/16)),
+    backgroundColor: '#000',
+  },
+  videoThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbnailLoading: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#000',
   },
   videoGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 15,
-    paddingHorizontal: 20,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '50%',
   },
-  videoText: {
-    color: "#fff",
+  videoOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  playButtonContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 40,
+    padding: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 5,
+  },
+  watchText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  youtubeText: {
+    color: '#FF0000',
     fontSize: 16,
-    fontWeight: "600",
-    marginLeft: 8,
+    fontWeight: 'bold',
+    marginTop: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
+  invalidUrlContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FF0000',
+  },
+  invalidUrlText: {
+    marginLeft: 8,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Comments Section
   commentSection: {
     marginTop: 10,
   },
@@ -968,31 +1417,52 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     marginBottom: 8,
   },
-  commentUserInfo: {
+  commentUserInfo: {    
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
   },
+  userProfileImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
   userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   avatarText: {
     color: "#fff",
     fontWeight: "bold",
-    fontSize: 14,
+    fontSize: 16,
   },
   commentUser: {
     fontWeight: "bold",
-    fontSize: 14,
+    fontSize: 15,
   },
   commentTime: {
     fontSize: 12,
     marginTop: 2,
+    color: '#666',
   },
   deleteButton: {
     padding: 4,
@@ -1000,21 +1470,68 @@ const styles = StyleSheet.create({
   commentText: {
     fontSize: 14,
     lineHeight: 20,
+    color: '#333',
   },
   commentInputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
     borderRadius: 25,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
     marginTop: 15,
     borderWidth: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  commentInputWrapper: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  currentUserProfileImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+    marginTop: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  currentUserAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 10,
+    marginTop: 6,
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  currentAvatarText: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 14,
   },
   commentInput: {
     flex: 1,
     paddingVertical: 10,
     fontSize: 15,
     maxHeight: 100,
+    minHeight: 40,
   },
   sendButton: {
     width: 40,
@@ -1023,6 +1540,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginLeft: 10,
+    marginBottom: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   // Dialog Styles
   dialogOverlay: {
@@ -1087,7 +1610,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   okButton: {
-    backgroundColor: '#FF9800', // Changed from blue to orange
+    backgroundColor: '#FF9800',
   },
   okButtonText: {
     color: '#fff',

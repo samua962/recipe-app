@@ -1,4 +1,4 @@
-// LoginScreen.js - WITH DARK THEME SUPPORT
+// LoginScreen.js - UPDATED WITH GUEST BUTTON
 import React, { useState } from 'react';
 import {
   View,
@@ -13,13 +13,14 @@ import {
   StatusBar,
   SafeAreaView
 } from 'react-native';
-import { signInWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from '../contexts/LanguageContext';
 import LanguageSwitcher from '../components/LanguageSwitcher';
 import { useTheme } from '../contexts/ThemeContext';
 import CustomDialog from '../components/CustomDialog';
+import { useGuest } from '../contexts/GuestContext'; // ADD THIS
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -33,12 +34,31 @@ export default function LoginScreen({ navigation }) {
 
   const { locale, t } = useLanguage();
   const { colors, isDarkMode } = useTheme();
+  const { setGuest } = useGuest(); // ADD THIS
 
   const showDialog = (title, message, type = 'error') => {
     setDialogTitle(title);
     setDialogMessage(message);
     setDialogType(type);
     setDialogVisible(true);
+  };
+
+  // ADD THIS FUNCTION
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    try {
+      // Set user as guest
+      await setGuest(true);
+      console.log("LoginScreen: User selected guest mode");
+      
+      // Navigate to MainTabs
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+    } catch (error) {
+      console.log('Error setting guest mode:', error);
+      showDialog(t('login.errors.title'), 'Could not continue as guest', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async () => {
@@ -53,7 +73,7 @@ export default function LoginScreen({ navigation }) {
       const user = userCredential.user;
 
       if (!user.emailVerified) {
-        await signOut(auth);
+        await auth.signOut();
         showDialog(
           t('login.errors.emailNotVerifiedTitle'),
           t('login.errors.emailNotVerifiedMessage'),
@@ -227,10 +247,26 @@ export default function LoginScreen({ navigation }) {
             </Text>
           </TouchableOpacity>
 
+          {/* Guest Button - ADD THIS */}
+          <TouchableOpacity
+            style={[
+              styles.guestButton,
+              { borderColor: colors.primary },
+              loading && styles.buttonDisabled
+            ]}
+            onPress={handleGuestLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.guestButtonText, { color: colors.primary }]}>
+              {t('login.continueAsGuest') || 'Continue as Guest'}
+            </Text>
+          </TouchableOpacity>
+
           {/* Signup Link */}
           <View style={styles.signupContainer}>
             <Text style={[styles.signupText, { color: colors.textSecondary }]}>
-              {t('login.noAccount')}{" "}
+              {t('login.noAccount')}
             </Text>
             <TouchableOpacity 
               onPress={() => navigation.navigate('Signup')}
@@ -340,6 +376,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  // ADD THESE STYLES
+  guestButton: {
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+  },
+  guestButtonText: { 
+    fontSize: 16, 
+    fontWeight: '700' 
+  },
   signupContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -352,5 +400,6 @@ const styles = StyleSheet.create({
   signupLink: { 
     fontSize: 14,
     fontWeight: '700',
+    marginLeft: 4,
   },
 });
