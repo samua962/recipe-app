@@ -56,7 +56,9 @@ export default function SignupScreen({ navigation }) {
 
     setLoading(true);
     try {
+      
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
       const user = userCredential.user;
 
       // Small delay to ensure auth is ready

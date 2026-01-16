@@ -1,4 +1,4 @@
-// screens/ExploreScreen.js - UPDATED WITH CATEGORY FIXES AND DARK MODE
+// screens/ExploreScreen.js - UPDATED WITH CONSISTENT CATEGORY HANDLING
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -25,22 +25,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useLocalizedRecipes } from '../hooks/useLocalizedRecipes';
 import { useTheme } from '../contexts/ThemeContext';
-import LanguageSwitcher from '../components/LanguageSwitcher';
+import { useNetwork } from '../contexts/NetworkContext';
+import OfflineBanner from '../components/OfflineBanner';
 
 const { width, height } = Dimensions.get('window');
 
-// CATEGORY DEFINITIONS - UPDATED TO MATCH AddRecipeScreen
-const CATEGORY_MAP = {
-  // English to Amharic mapping
-  'breakfast': { en: 'Breakfast', am: 'ቁርስ' },
-  'lunch': { en: 'Lunch', am: 'ምሳ' },
-  'dinner': { en: 'Dinner', am: 'እራት' },
-  'dessert': { en: 'Dessert', am: 'ምርጥ ምግብ' },
-  'drinks': { en: 'Drinks', am: 'መጠጦች' },
-  'vegetarian': { en: 'Vegetarian', am: 'አትክልት' },
-  'meat': { en: 'Meat', am: 'ስጋ ምግብ' },
-  'appetizer': { en: 'Appetizer', am: 'መግቢያ' }
-};
+// CATEGORY DEFINITIONS - MATCHING AddRecipeScreen.js EXACTLY
+const CATEGORIES = [
+  { id: 'breakfast', en: "Breakfast", am: "ቁርስ", icon: 'cafe' },
+  { id: 'lunch', en: "Lunch", am: "ምሳ", icon: 'restaurant' },
+  { id: 'dinner', en: "Dinner", am: "እራት", icon: 'moon' },
+  { id: 'dessert', en: "Dessert", am: "ምርጥ ምግብ", icon: 'ice-cream' },
+  { id: 'drinks', en: "Drinks", am: "መጠጦች", icon: 'wine' },
+  { id: 'vegetarian', en: "Vegetarian", am: "አትክልት", icon: 'leaf' },
+  { id: 'meat', en: "Meat", am: "ስጋ ምግብ", icon: 'pizza' },
+  { id: 'appetizer', en: "Appetizer", am: "መግቢያ", icon: 'fast-food' }
+];
 
 export default function ExploreScreen({ navigation }) {
   const [recipes, setRecipes] = useState([]);
@@ -59,18 +59,18 @@ export default function ExploreScreen({ navigation }) {
   
   // Theme hook
   const { colors, isDarkMode, toggleTheme } = useTheme();
+  
+  // Network hook
+  const { isOnline, refreshNetworkStatus, isLoading: networkLoading } = useNetwork();
 
-  // UPDATED FILTERS - Include all categories from AddRecipeScreen
+  // UPDATED FILTERS - Using same categories as AddRecipeScreen
   const filters = [
     { id: 'all', name: t('categories.all'), icon: 'grid' },
-    { id: 'breakfast', name: t('categories.breakfast'), icon: 'cafe' },
-    { id: 'lunch', name: t('categories.lunch'), icon: 'restaurant' },
-    { id: 'dinner', name: t('categories.dinner'), icon: 'moon' },
-    { id: 'dessert', name: t('categories.dessert'), icon: 'ice-cream' },
-    { id: 'drinks', name: t('categories.drinks'), icon: 'wine' },
-    { id: 'vegetarian', name: t('categories.vegetarian'), icon: 'leaf' },
-    { id: 'meat', name: t('categories.meat'), icon: 'pizza' },
-    { id: 'appetizer', name: t('categories.appetizer'), icon: 'fast-food' },
+    ...CATEGORIES.map(cat => ({
+      id: cat.id,
+      name: t(`categories.${cat.id}`),
+      icon: cat.icon
+    })),
     { id: 'quick', name: t('explore.quick'), icon: 'flash' },
   ];
 
@@ -88,7 +88,95 @@ export default function ExploreScreen({ navigation }) {
     filterRecipes();
   }, [searchQuery, selectedFilter, recipes]);
 
+  // Helper function to get category from recipe (consistent with AddRecipeScreen)
+  const getRecipeCategory = (recipe) => {
+    if (!recipe.category) return '';
+    
+    // If category is stored as multi-language object (new format)
+    if (typeof recipe.category === 'object') {
+      return recipe.category[locale] || recipe.category.en || recipe.category.am || '';
+    }
+    
+    // If category is stored as string (old format)
+    return recipe.category;
+  };
+
+  // Helper function to get normalized category ID for filtering
+  const getNormalizedCategoryId = (recipe) => {
+    const categoryString = getRecipeCategory(recipe).toLowerCase().trim();
+    if (!categoryString) return '';
+    
+    // Try to match with predefined categories
+    for (const cat of CATEGORIES) {
+      if (categoryString === cat.en.toLowerCase() || categoryString === cat.am) {
+        return cat.id;
+      }
+    }
+    
+    // Try partial matching
+    if (categoryString.includes('breakfast') || categoryString.includes('ቁርስ')) return 'breakfast';
+    if (categoryString.includes('lunch') || categoryString.includes('ምሳ')) return 'lunch';
+    if (categoryString.includes('dinner') || categoryString.includes('እራት')) return 'dinner';
+    if (categoryString.includes('dessert') || categoryString.includes('ምርጥ')) return 'dessert';
+    if (categoryString.includes('drink') || categoryString.includes('መጠጥ')) return 'drinks';
+    if (categoryString.includes('vegetarian') || categoryString.includes('አትክልት')) return 'vegetarian';
+    if (categoryString.includes('meat') || categoryString.includes('ስጋ')) return 'meat';
+    if (categoryString.includes('appetizer') || categoryString.includes('መግቢያ')) return 'appetizer';
+    
+    return '';
+  };
+
+  // Helper function to get title as string
+  const getTitleString = (recipe) => {
+    if (!recipe.title) return t('explore.untitledRecipe');
+    
+    // If title is stored as multi-language object
+    if (typeof recipe.title === 'object') {
+      return recipe.title[locale] || recipe.title.en || t('explore.untitledRecipe');
+    }
+    
+    // If title is stored as string (old format)
+    return recipe.title || t('explore.untitledRecipe');
+  };
+
+  // Helper function to get description as string
+  const getDescriptionString = (recipe) => {
+    if (!recipe.description) return t('explore.noDescription');
+    
+    // If description is stored as multi-language object
+    if (typeof recipe.description === 'object') {
+      return recipe.description[locale] || recipe.description.en || t('explore.noDescription');
+    }
+    
+    // If description is stored as string (old format)
+    return recipe.description || t('explore.noDescription');
+  };
+
+  // Handle retry connection
+  const handleRetryConnection = async () => {
+    const connected = await refreshNetworkStatus();
+    if (connected) {
+      loadRecipes();
+    }
+  };
+
+  // Handle go to favourites
+  const handleGoToFavourites = () => {
+    navigation.navigate('Saved');
+  };
+
   const loadRecipes = async () => {
+    // Check if offline
+    if (!isOnline) {
+      console.log('Offline mode - recipes not loaded');
+      setLoading(false);
+      setRefreshing(false);
+      setRecipes([]);
+      setFilteredRecipes([]);
+      setTrendingRecipes([]);
+      return;
+    }
+
     try {
       setRefreshing(true);
       
@@ -119,76 +207,7 @@ export default function ExploreScreen({ navigation }) {
     }
   };
 
-  // UPDATED: Better category extraction with fallback logic
-  const getCategoryString = (recipe) => {
-    if (!recipe.category) return '';
-    
-    // Handle multi-language category object
-    if (typeof recipe.category === 'object') {
-      // Try to get category in current locale
-      const localizedCategory = recipe.category[locale];
-      if (localizedCategory) return localizedCategory;
-      
-      // Fallback to English
-      if (recipe.category.en) return recipe.category.en;
-      
-      // Fallback to Amharic
-      if (recipe.category.am) return recipe.category.am;
-      
-      return '';
-    }
-    
-    // If category is stored as string (old format)
-    return recipe.category || '';
-  };
-
-  // UPDATED: Get normalized category for filtering
-  const getNormalizedCategory = (recipe) => {
-    const categoryString = getCategoryString(recipe).toLowerCase();
-    
-    // Try to match against known categories
-    for (const [key, translations] of Object.entries(CATEGORY_MAP)) {
-      // Check if category matches English name
-      if (categoryString === translations.en.toLowerCase()) return key;
-      
-      // Check if category matches Amharic name
-      if (categoryString === translations.am) return key;
-      
-      // Check if category contains keyword
-      if (categoryString.includes(key)) return key;
-    }
-    
-    // Default to empty string if no match
-    return '';
-  };
-
-  // Helper function to get title as string
-  const getTitleString = (recipe) => {
-    if (!recipe.title) return t('explore.untitledRecipe');
-    
-    // If title is stored as multi-language object
-    if (typeof recipe.title === 'object') {
-      return recipe.title[locale] || recipe.title.en || t('explore.untitledRecipe');
-    }
-    
-    // If title is stored as string (old format)
-    return recipe.title || t('explore.untitledRecipe');
-  };
-
-  // Helper function to get description as string
-  const getDescriptionString = (recipe) => {
-    if (!recipe.description) return t('explore.noDescription');
-    
-    // If description is stored as multi-language object
-    if (typeof recipe.description === 'object') {
-      return recipe.description[locale] || recipe.description.en || t('explore.noDescription');
-    }
-    
-    // If description is stored as string (old format)
-    return recipe.description || t('explore.noDescription');
-  };
-
-  // UPDATED FILTER FUNCTION with proper category matching
+  // UPDATED FILTER FUNCTION with consistent category handling
   const filterRecipes = () => {
     let filtered = [...recipes];
 
@@ -198,7 +217,7 @@ export default function ExploreScreen({ navigation }) {
       filtered = filtered.filter(recipe => {
         const title = getTitleString(recipe).toLowerCase();
         const description = getDescriptionString(recipe).toLowerCase();
-        const category = getCategoryString(recipe).toLowerCase();
+        const category = getRecipeCategory(recipe).toLowerCase();
         
         // Check title, description, and category
         if (title.includes(queryLower) || 
@@ -226,7 +245,7 @@ export default function ExploreScreen({ navigation }) {
       });
     }
 
-    // Apply category filter with better matching
+    // Apply category filter with consistent handling
     if (selectedFilter !== 'all') {
       if (selectedFilter === 'quick') {
         filtered = filtered.filter(recipe => 
@@ -234,17 +253,8 @@ export default function ExploreScreen({ navigation }) {
         );
       } else {
         filtered = filtered.filter(recipe => {
-          const normalizedCategory = getNormalizedCategory(recipe);
-          
-          // Special handling for vegetarian
-          if (selectedFilter === 'vegetarian') {
-            return normalizedCategory === 'vegetarian' || 
-                   recipe.tags?.includes('vegetarian') ||
-                   getCategoryString(recipe).toLowerCase().includes('vegetarian');
-          }
-          
-          // Match against normalized category
-          return normalizedCategory === selectedFilter;
+          const normalizedCategoryId = getNormalizedCategoryId(recipe);
+          return normalizedCategoryId === selectedFilter;
         });
       }
     }
@@ -253,9 +263,14 @@ export default function ExploreScreen({ navigation }) {
   };
 
   const onRefresh = React.useCallback(() => {
+    // Don't refresh if offline
+    if (!isOnline) {
+      setRefreshing(false);
+      return;
+    }
     setRefreshing(true);
     loadRecipes();
-  }, []);
+  }, [isOnline]);
 
   const getImageSource = (item) => {
     if (item?.imageBase64) {
@@ -273,8 +288,7 @@ export default function ExploreScreen({ navigation }) {
   };
 
   const renderRecipeGrid = ({ item }) => {
-    const localizedRecipe = getLocalizedRecipe(item);
-    const category = getCategoryString(item);
+    const category = getRecipeCategory(item);
     const title = getTitleString(item);
     
     return (
@@ -318,8 +332,7 @@ export default function ExploreScreen({ navigation }) {
   };
 
   const renderRecipeList = ({ item }) => {
-    const localizedRecipe = getLocalizedRecipe(item);
-    const category = getCategoryString(item);
+    const category = getRecipeCategory(item);
     const title = getTitleString(item);
     const description = getDescriptionString(item);
     
@@ -433,7 +446,7 @@ export default function ExploreScreen({ navigation }) {
     extrapolate: 'clamp',
   });
 
-  if (loading && !refreshing) {
+  if ((loading && !refreshing) || networkLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <StatusBar barStyle={isDarkMode ? "light-content" : "dark-content"} backgroundColor={colors.background} />
@@ -444,15 +457,24 @@ export default function ExploreScreen({ navigation }) {
   }
 
   const getResultsText = () => {
+    // Different message when offline
+    if (!isOnline) {
+      return t('offline.exploreOffline');
+    }
+    
     let text = `${filteredRecipes.length} ${t('explore.recipesFound')}`;
     
     if (searchQuery) {
       text += ` ${t('explore.for')} "${searchQuery}"`;
     }
     
-    if (selectedFilter !== 'all') {
+    if (selectedFilter !== 'all' && selectedFilter !== 'quick') {
       const filter = filters.find(f => f.id === selectedFilter);
       text += ` ${t('explore.in')} ${filter?.name}`;
+    }
+    
+    if (selectedFilter === 'quick') {
+      text += ` ${t('explore.in')} ${t('explore.quick')}`;
     }
     
     return text;
@@ -478,7 +500,7 @@ export default function ExploreScreen({ navigation }) {
             <View>
               <Text style={styles.headerTitle}>{t('explore.title')}</Text>
               <Text style={styles.headerSubtitle}>
-                {t('explore.subtitle', { count: recipes.length })}
+                {!isOnline ? t('offline.mode') : t('explore.subtitle', { count: recipes.length })}
               </Text>
             </View>
             <View style={styles.headerRight}>
@@ -524,40 +546,77 @@ export default function ExploreScreen({ navigation }) {
             tintColor={colors.primary}
             title={t('home.pullToRefresh')}
             titleColor={colors.primary}
+            enabled={isOnline}
           />
         }
       >
-        {/* Search Bar */}
-        <View style={styles.searchContainer}>
-          <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Ionicons name="search" size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
-              placeholder={t('explore.searchPlaceholder')}
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            {searchQuery ? (
-              <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-        </View>
-
-        {/* Quick Filters - Now includes all categories */}
-        <View style={styles.filtersSection}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('explore.quickFilters')}</Text>
-          <FlatList
-            data={filters}
-            horizontal
-            keyExtractor={(item) => item.id}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filtersContainer}
-            renderItem={renderFilterItem}
+        {/* Offline Banner */}
+        {!isOnline && (
+          <OfflineBanner 
+            onRetry={handleRetryConnection}
+            onGoToFavourites={handleGoToFavourites}
+            showFavouritesButton={true}
           />
-        </View>
+        )}
+
+        {/* Search Bar - Only show if online */}
+        {isOnline && (
+          <View style={styles.searchContainer}>
+            <View style={[styles.searchBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Ionicons name="search" size={20} color={colors.textSecondary} />
+              <TextInput
+                style={[styles.searchInput, { color: colors.text }]}
+                placeholder={t('explore.searchPlaceholder')}
+                placeholderTextColor={colors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                editable={isOnline}
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
+        )}
+
+        {/* Offline Message if no recipes */}
+        {!isOnline && recipes.length === 0 && (
+          <View style={[styles.offlineMessage, { backgroundColor: colors.card }]}>
+            <Ionicons name="cloud-offline-outline" size={50} color={colors.textSecondary} />
+            <Text style={[styles.offlineMessageTitle, { color: colors.text }]}>
+              {t('offline.exploreOfflineTitle')}
+            </Text>
+            <Text style={[styles.offlineMessageText, { color: colors.textSecondary }]}>
+              {t('offline.exploreOfflineMessage')}
+            </Text>
+            <TouchableOpacity 
+              style={[styles.offlineActionButton, { backgroundColor: colors.primary }]}
+              onPress={handleGoToFavourites}
+            >
+              <Ionicons name="heart" size={20} color="#fff" />
+              <Text style={styles.offlineActionButtonText}>
+                {t('offline.goToFavourites')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Quick Filters - Only show if online */}
+        {isOnline && recipes.length > 0 && (
+          <View style={styles.filtersSection}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('explore.quickFilters')}</Text>
+            <FlatList
+              data={filters}
+              horizontal
+              keyExtractor={(item) => item.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filtersContainer}
+              renderItem={renderFilterItem}
+            />
+          </View>
+        )}
 
         {/* Recipe Count */}
         <View style={styles.resultsSection}>
@@ -566,8 +625,8 @@ export default function ExploreScreen({ navigation }) {
           </Text>
         </View>
 
-        {/* Recipes Grid/List */}
-        {filteredRecipes.length > 0 ? (
+        {/* Recipes Grid/List - Only show if online and has recipes */}
+        {isOnline && filteredRecipes.length > 0 ? (
           <View style={styles.recipesSection}>
             {viewMode === 'grid' ? (
               <RecipesGridView key="grid-view" />
@@ -576,39 +635,44 @@ export default function ExploreScreen({ navigation }) {
             )}
           </View>
         ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={80} color={colors.border} />
-            <Text style={[styles.emptyStateTitle, { color: colors.text }]}>{t('explore.noRecipesFound')}</Text>
-            <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-              {searchQuery 
-                ? t('explore.noResultsForSearch', { query: searchQuery })
-                : t('explore.tryDifferentFilter')
-              }
-            </Text>
-            <TouchableOpacity 
-              style={[styles.emptyStateButton, { backgroundColor: colors.primary }]}
-              onPress={() => {
-                setSearchQuery('');
-                setSelectedFilter('all');
-              }}
-            >
-              <Text style={styles.emptyStateButtonText}>{t('explore.showAllRecipes')}</Text>
-            </TouchableOpacity>
-          </View>
+          // Different empty state for offline
+          !isOnline ? null : (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={80} color={colors.border} />
+              <Text style={[styles.emptyStateTitle, { color: colors.text }]}>{t('explore.noRecipesFound')}</Text>
+              <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+                {searchQuery 
+                  ? t('explore.noResultsForSearch', { query: searchQuery })
+                  : t('explore.tryDifferentFilter')
+                }
+              </Text>
+              <TouchableOpacity 
+                style={[styles.emptyStateButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setSearchQuery('');
+                  setSelectedFilter('all');
+                }}
+              >
+                <Text style={styles.emptyStateButtonText}>{t('explore.showAllRecipes')}</Text>
+              </TouchableOpacity>
+            </View>
+          )
         )}
 
-        {/* Difficulty Guide */}
-        <View style={[styles.guideSection, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('explore.difficultyGuide')}</Text>
-          <View style={styles.difficultyGuide}>
-            {difficultyLevels.map(level => (
-              <View key={level.id} style={styles.difficultyGuideItem}>
-                <View style={[styles.difficultyDot, { backgroundColor: level.color }]} />
-                <Text style={[styles.difficultyGuideText, { color: colors.textSecondary }]}>{level.name}</Text>
-              </View>
-            ))}
+        {/* Difficulty Guide - Only show if online */}
+        {isOnline && recipes.length > 0 && (
+          <View style={[styles.guideSection, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('explore.difficultyGuide')}</Text>
+            <View style={styles.difficultyGuide}>
+              {difficultyLevels.map(level => (
+                <View key={level.id} style={styles.difficultyGuideItem}>
+                  <View style={[styles.difficultyDot, { backgroundColor: level.color }]} />
+                  <Text style={[styles.difficultyGuideText, { color: colors.textSecondary }]}>{level.name}</Text>
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
       </Animated.ScrollView>
     </SafeAreaView>
   );
@@ -679,6 +743,44 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 16,
   },
+  offlineMessage: {
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 20,
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  offlineMessageTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  offlineMessageText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  offlineActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  offlineActionButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   filtersSection: {
     marginBottom: 20,
   },
@@ -687,6 +789,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     marginBottom: 16,
     paddingHorizontal: 20,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
+  seeAllText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   filtersContainer: {
     paddingHorizontal: 20,
@@ -710,6 +823,17 @@ const styles = StyleSheet.create({
   },
   activeFilterText: {
     color: "#fff",
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  metaText: {
+    color: '#fff',
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   resultsSection: {
     paddingHorizontal: 20,

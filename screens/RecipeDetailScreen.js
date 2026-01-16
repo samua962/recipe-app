@@ -1,5 +1,5 @@
-// screens/RecipeDetailScreen.js
-import React, { useEffect, useState, useCallback } from "react";
+// screens/RecipeDetailScreen.js - COMPLETELY FIXED RELATED RECIPES LOADING
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Dimensions,
   Modal,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -32,6 +33,7 @@ import {
   getDocs,
   getDoc,
   deleteDoc,
+  limit,
 } from "firebase/firestore";
 
 // Import multi-language hooks
@@ -74,6 +76,11 @@ export default function RecipeDetailScreen({ route }) {
   const [currentUserProfile, setCurrentUserProfile] = useState(null);
   const [authorLoaded, setAuthorLoaded] = useState(false);
   
+  // NEW STATES FOR RELATED RECIPES - SIMPLIFIED
+  const [relatedRecipes, setRelatedRecipes] = useState([]);
+  const [loadingRelatedRecipes, setLoadingRelatedRecipes] = useState(false);
+  const [showRelatedRecipes, setShowRelatedRecipes] = useState(true);
+  
   const [showProgress, setShowProgress] = useState(false);
   const [progressText, setProgressText] = useState("");
   const [showDialog, setShowDialog] = useState(false);
@@ -86,6 +93,7 @@ export default function RecipeDetailScreen({ route }) {
   });
 
   const isApproved = recipe.approved === true;
+  const hasLoadedRelatedRef = useRef(false);
 
   // Load current user profile
   useEffect(() => {
@@ -105,9 +113,8 @@ export default function RecipeDetailScreen({ route }) {
     loadCurrentUserProfile();
   }, [user]);
 
-  // Load author profile - FIXED with useCallback to prevent infinite loop
+  // Load author profile
   const loadAuthorProfile = useCallback(async () => {
-    // Get author ID from recipe (try multiple possible fields)
     const authorId = recipe.authorId || recipe.userId;
     
     if (!authorId || authorLoaded) {
@@ -134,6 +141,209 @@ export default function RecipeDetailScreen({ route }) {
   useEffect(() => {
     loadAuthorProfile();
   }, [loadAuthorProfile]);
+
+  // NEW: SIMPLIFIED Load related recipes - LOAD ONLY ONCE
+  useEffect(() => {
+    const loadRelatedRecipesOnce = async () => {
+      if (!recipe.id || !isApproved || hasLoadedRelatedRef.current) {
+        return;
+      }
+
+      hasLoadedRelatedRef.current = true;
+      setLoadingRelatedRecipes(true);
+      
+      try {
+        // Get current recipe category
+        const currentCategory = getRecipeCategory(recipe);
+        if (!currentCategory) {
+          setRelatedRecipes([]);
+          setLoadingRelatedRecipes(false);
+          return;
+        }
+
+        // Query for approved recipes
+        const q = query(
+          collection(db, "recipes"),
+          where("approved", "==", true),
+          orderBy("createdAt", "desc"),
+          limit(12)
+        );
+
+        const snapshot = await getDocs(q);
+        let allRecipes = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        // Filter recipes with same category
+        const filteredRecipes = allRecipes.filter(otherRecipe => {
+          if (otherRecipe.id === recipe.id) return false;
+          
+          const otherCategory = getRecipeCategory(otherRecipe);
+          if (!otherCategory) return false;
+          
+          return currentCategory.toLowerCase() === otherCategory.toLowerCase();
+        });
+
+        // Remove duplicates
+        const uniqueRecipes = filteredRecipes.filter((recipe, index, self) =>
+          index === self.findIndex((r) => r.id === recipe.id)
+        );
+
+        // Get up to 4 recipes
+        let finalRecipes = uniqueRecipes.slice(0, 4);
+        
+        // If not enough, add random recipes
+        if (finalRecipes.length < 4) {
+          const randomRecipes = allRecipes
+            .filter(r => r.id !== recipe.id && !finalRecipes.some(fr => fr.id === r.id))
+            .slice(0, 4 - finalRecipes.length);
+          finalRecipes = [...finalRecipes, ...randomRecipes];
+        }
+
+        setRelatedRecipes(finalRecipes);
+        setLoadingRelatedRecipes(false);
+
+      } catch (error) {
+        console.error("Error loading related recipes:", error);
+        setRelatedRecipes([]);
+        setLoadingRelatedRecipes(false);
+      }
+    };
+
+    loadRelatedRecipesOnce();
+
+    // Cleanup
+    return () => {
+      hasLoadedRelatedRef.current = false;
+    };
+  }, [recipe.id, recipe.category, isApproved]);
+
+  // Helper function to get category from recipe
+  const getRecipeCategory = (recipeData) => {
+    if (!recipeData.category) return '';
+    
+    if (typeof recipeData.category === 'object') {
+      return recipeData.category[currentLanguage] || 
+             recipeData.category.en || 
+             recipeData.category.am || 
+             '';
+    }
+    
+    return recipeData.category || '';
+  };
+
+  // Get localized title for any recipe
+  const getRecipeTitle = (recipeData) => {
+    if (!recipeData.title) return t('explore.untitledRecipe');
+    
+    if (typeof recipeData.title === 'object') {
+      return recipeData.title[currentLanguage] || 
+             recipeData.title.en || 
+             t('explore.untitledRecipe');
+    }
+    
+    return recipeData.title || t('explore.untitledRecipe');
+  };
+
+  // Get image source for any recipe
+  const getRecipeImageSource = (recipeData) => {
+    if (recipeData?.imageBase64) {
+      return { uri: `data:image/jpeg;base64,${recipeData.imageBase64}` };
+    } else if (recipeData?.imageURL) {
+      return { uri: recipeData.imageURL };
+    } else {
+      return require('../assets/placeholder-image.jpg');
+    }
+  };
+
+  // Render related recipe item
+  const renderRelatedRecipe = ({ item, index }) => {
+    const title = getRecipeTitle(item);
+    const category = getRecipeCategory(item);
+    
+    return (
+      <TouchableOpacity
+        style={[styles.relatedRecipeCard, { backgroundColor: colors.card }]}
+        onPress={() => navigation.replace('RecipeDetail', { recipe: item })}
+        activeOpacity={0.9}
+      >
+        <Image 
+          source={getRecipeImageSource(item)} 
+          style={styles.relatedRecipeImage}
+          defaultSource={require('../assets/placeholder-image.jpg')}
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.7)']}
+          style={styles.relatedRecipeGradient}
+        />
+        <View style={styles.relatedRecipeContent}>
+          <Text style={styles.relatedRecipeTitle} numberOfLines={2}>
+            {title}
+          </Text>
+          <View style={styles.relatedRecipeMeta}>
+            <View style={[styles.relatedRecipeCategory, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+              <Ionicons name="pricetag" size={10} color="#fff" />
+              <Text style={styles.relatedRecipeCategoryText}>
+                {category || t('categories.all')}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  // Render related recipes section
+  const renderRelatedRecipesSection = () => {
+    if (!isApproved) return null;
+    
+    return (
+      <View style={styles.relatedRecipesSection}>
+        <View style={styles.sectionHeader}>
+          <Ionicons name="restaurant-outline" size={22} color={colors.primary} />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('recipeDetail.relatedRecipes')}
+          </Text>
+          <TouchableOpacity 
+            onPress={() => setShowRelatedRecipes(!showRelatedRecipes)}
+            style={styles.toggleRelatedButton}
+          >
+            <Ionicons 
+              name={showRelatedRecipes ? "chevron-up" : "chevron-down"} 
+              size={20} 
+              color={colors.textSecondary} 
+            />
+          </TouchableOpacity>
+        </View>
+        
+        {showRelatedRecipes && (
+          <>
+            {loadingRelatedRecipes ? (
+              <ActivityIndicator size="small" color={colors.primary} style={styles.relatedLoading} />
+            ) : relatedRecipes.length > 0 ? (
+              <FlatList
+                data={relatedRecipes}
+                renderItem={renderRelatedRecipe}
+                keyExtractor={(item) => `related-${item.id}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.relatedRecipesList}
+                ItemSeparatorComponent={() => <View style={{ width: 12 }} />}
+              />
+            ) : (
+              <View style={[styles.noRelatedRecipes, { backgroundColor: colors.card }]}>
+                <Ionicons name="restaurant-outline" size={40} color={colors.textSecondary} />
+                <Text style={[styles.noRelatedText, { color: colors.textSecondary }]}>
+                  {t('recipeDetail.noRelatedRecipes')}
+                </Text>
+              </View>
+            )}
+          </>
+        )}
+      </View>
+    );
+  };
 
   // Custom Dialog Component
   const CustomDialog = () => (
@@ -461,9 +671,7 @@ export default function RecipeDetailScreen({ route }) {
     }
     if (!newComment.trim()) return;
 
-    showProgressBar(t('comments.adding'));
     try {
-      // Get current user profile
       let username = user.email?.split("@")[0] || "Anonymous";
       let profilePhoto = null;
       let displayName = username;
@@ -485,9 +693,7 @@ export default function RecipeDetailScreen({ route }) {
         timestamp: new Date(),
       });
       setNewComment("");
-      hideProgressBar();
     } catch (err) {
-      hideProgressBar();
       showCustomDialog(
         t('app.error'),
         err.message,
@@ -669,22 +875,18 @@ export default function RecipeDetailScreen({ route }) {
 
   // Get author display name
   const getAuthorDisplayName = () => {
-    // Priority 1: From loaded author profile
     if (authorData?.name || authorData?.displayName) {
       return authorData.name || authorData.displayName;
     }
     
-    // Priority 2: From recipe fields (fallback from admin dashboard)
     if (recipe.authorName) {
       return recipe.authorName;
     }
     
-    // Priority 3: From email in recipe
     if (recipe.authorEmail) {
       return recipe.authorEmail.split("@")[0];
     }
     
-    // Priority 4: Default
     return t('recipe.anonymousAuthor');
   };
 
@@ -793,7 +995,7 @@ export default function RecipeDetailScreen({ route }) {
           </View>
         </View>
 
-        {/* Author Section - NEW */}
+        {/* Author Section */}
         {renderAuthorSection()}
 
         {/* Recipe Meta Info */}
@@ -957,12 +1159,12 @@ export default function RecipeDetailScreen({ route }) {
                 <Text style={[styles.noCommentsText, { color: colors.textSecondary }]}>{t('comments.noComments')}</Text>
               </View>
             ) : (
-              comments.map((c) => {
+              comments.map((c, index) => {
                 const displayName = c.username || c.userEmail?.split("@")[0] || "Anonymous";
                 const profilePhoto = c.profilePhoto;
                 
                 return (
-                  <View key={c.id} style={[styles.commentBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View key={`comment-${c.id}-${index}`} style={[styles.commentBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <View style={styles.commentHeader}>
                       <TouchableOpacity 
                         style={styles.commentUserInfo}
@@ -1058,6 +1260,9 @@ export default function RecipeDetailScreen({ route }) {
             </View>
           </View>
         )}
+
+        {/* NEW: Related Recipes Section (AFTER COMMENTS) */}
+        {renderRelatedRecipesSection()}
       </View>
     </ScrollView>
   );
@@ -1136,7 +1341,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 14,
   },
-  // Author Section Styles - NEW
+  // Author Section Styles
   authorSection: {
     borderRadius: 12,
     padding: 16,
@@ -1259,6 +1464,86 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: "center",
     marginTop: 8,
+  },
+  // NEW: Related Recipes Section Styles
+  relatedRecipesSection: {
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  toggleRelatedButton: {
+    padding: 4,
+    marginLeft: 'auto',
+  },
+  relatedLoading: {
+    marginVertical: 20,
+  },
+  relatedRecipesList: {
+    paddingVertical: 10,
+  },
+  relatedRecipeCard: {
+    width: 180,
+    height: 150,
+    borderRadius: 16,
+    overflow: "hidden",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  relatedRecipeImage: {
+    width: "100%",
+    height: "100%",
+  },
+  relatedRecipeGradient: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: "60%",
+  },
+  relatedRecipeContent: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 12,
+  },
+  relatedRecipeTitle: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 8,
+    lineHeight: 18,
+  },
+  relatedRecipeMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  relatedRecipeCategory: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  relatedRecipeCategoryText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "600",
+    marginLeft: 4,
+  },
+  noRelatedRecipes: {
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  noRelatedText: {
+    fontSize: 14,
+    marginTop: 12,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 25,

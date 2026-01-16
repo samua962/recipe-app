@@ -73,7 +73,7 @@ export default function OverviewSection({ stats, onNavigate, navigation, users, 
       type: 'user',
       title: t('admin.overview.activity.newUser'),
       description: `${user.name} ${t('admin.overview.activity.joined')}`,
-      time: user.createdAt?.toDate?.() || new Date(),
+      time: user.createdAt?.toDate?.() || user.createdAt || new Date(),
       icon: 'person-add',
       color: '#4ecdc4'
     }));
@@ -85,26 +85,48 @@ export default function OverviewSection({ stats, onNavigate, navigation, users, 
         type: 'recipe',
         title: recipe.approved ? t('admin.overview.activity.recipeApproved') : t('admin.overview.activity.newRecipe'),
         description: `"${localizedTitle || recipe.title}" ${recipe.approved ? t('admin.overview.activity.wasApproved') : t('admin.overview.activity.waitingApproval')}`,
-        time: recipe.createdAt?.toDate?.() || new Date(),
+        time: recipe.createdAt?.toDate?.() || recipe.createdAt || new Date(),
         icon: 'restaurant',
         color: recipe.approved ? '#4caf50' : '#ff9800'
       };
     });
 
     return [...recentUsers, ...recentRecipes]
-      .sort((a, b) => new Date(b.time) - new Date(a.time))
+      .sort((a, b) => {
+        const timeA = new Date(a.time);
+        const timeB = new Date(b.time);
+        return timeB - timeA; // Sort descending (newest first)
+      })
       .slice(0, 4);
   };
 
   const formatTimeAgo = (date) => {
+    if (!date) return t('common.time.unknown');
+    
+    let dateObj;
+    try {
+      dateObj = date.toDate ? date.toDate() : new Date(date);
+      
+      // Check if date is valid
+      if (isNaN(dateObj.getTime())) {
+        return t('common.time.unknown');
+      }
+    } catch (error) {
+      return t('common.time.unknown');
+    }
+    
     const now = new Date();
-    const diffInSeconds = Math.floor((now - date) / 1000);
+    const diffInSeconds = Math.floor((now - dateObj) / 1000);
     
     if (diffInSeconds < 60) return t('common.time.justNow');
     if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} ${t('common.time.minutesAgo')}`;
     if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ${t('common.time.hoursAgo')}`;
-    return `${Math.floor(diffInSeconds / 86400)} ${t('common.time.daysAgo')}`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} ${t('common.time.daysAgo')}`;
+    if (diffInSeconds < 31536000) return `${Math.floor(diffInSeconds / 2592000)} ${t('common.time.monthsAgo')}`;
+    return `${Math.floor(diffInSeconds / 31536000)} ${t('common.time.yearsAgo')}`;
   };
+
+  const recentActivity = getRecentActivity();
 
   return (
     <ScrollView 
@@ -169,8 +191,8 @@ export default function OverviewSection({ stats, onNavigate, navigation, users, 
       <View style={[styles.section, { backgroundColor: colors.card }]}>
         <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('admin.overview.recentActivity')}</Text>
         <View style={styles.activityList}>
-          {getRecentActivity().length > 0 ? (
-            getRecentActivity().map((activity, index) => (
+          {recentActivity.length > 0 ? (
+            recentActivity.map((activity, index) => (
               <View key={index} style={[styles.activityItem, { backgroundColor: colors.background }]}>
                 <View style={[styles.activityIcon, { backgroundColor: activity.color }]}>
                   <Ionicons name={activity.icon} size={16} color="#fff" />
@@ -179,7 +201,7 @@ export default function OverviewSection({ stats, onNavigate, navigation, users, 
                   <Text style={[styles.activityTitle, { color: colors.text }]}>{activity.title}</Text>
                   <Text style={[styles.activityDescription, { color: colors.textSecondary }]}>{activity.description}</Text>
                   <Text style={[styles.activityTime, { color: colors.textSecondary }]}>
-                    {formatTimeAgo(new Date(activity.time))}
+                    {formatTimeAgo(activity.time)}
                   </Text>
                 </View>
               </View>

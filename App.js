@@ -18,6 +18,7 @@ import { auth, db } from "./firebaseConfig";
 import { LanguageProvider } from "./contexts/LanguageContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { GuestProvider } from "./contexts/GuestContext";
+import { NetworkProvider } from './contexts/NetworkContext';
 
 // Import ALL your screens
 import IntroScreen from "./screens/IntroScreen";
@@ -214,6 +215,7 @@ function MainAppContent() {
 // App wrapper
 export default function App() {
   return (
+       <NetworkProvider>
     <ThemeProvider>
       <LanguageProvider>
         <GuestProvider>
@@ -221,6 +223,7 @@ export default function App() {
         </GuestProvider>
       </LanguageProvider>
     </ThemeProvider>
+    </NetworkProvider>
   );
 }
 

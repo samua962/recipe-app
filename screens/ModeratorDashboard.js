@@ -1,4 +1,5 @@
-// screens/ModeratorDashboard.js - FIXED VERSION
+
+// screens/ModeratorDashboard.js - FIXED VERSION WITH PROPER DARK MODE DIALOGS
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -42,7 +43,7 @@ export default function ModeratorDashboard({ navigation }) {
   const [showDialog, setShowDialog] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogMessage, setDialogMessage] = useState('');
-  const [dialogIcon, setDialogIcon] = useState('information-circle'); // ADDED THIS LINE
+  const [dialogIcon, setDialogIcon] = useState('information-circle');
   const [showActionDialog, setShowActionDialog] = useState(false);
   const [actionType, setActionType] = useState('');
   const [currentRecipe, setCurrentRecipe] = useState(null);
@@ -86,7 +87,11 @@ export default function ModeratorDashboard({ navigation }) {
       setPendingRecipes(recipes);
     } catch (error) {
       console.error('Error loading pending recipes:', error);
-      showCustomDialog(t('moderator.errors.loadFailed'), `${t('moderator.errors.loadFailedMessage')} ${error.message}`, "close-circle");
+      showCustomDialog(
+        t('moderator.errors.loadFailed'), 
+        `${t('moderator.errors.loadFailedMessage')} ${error.message}`, 
+        "close-circle-outline"
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -98,10 +103,10 @@ export default function ModeratorDashboard({ navigation }) {
     loadPendingRecipes();
   }, []);
 
-  const showCustomDialog = (title, message, icon = "information-circle") => {
+  const showCustomDialog = (title, message, icon = "information-circle-outline") => {
     setDialogTitle(title);
     setDialogMessage(message);
-    setDialogIcon(icon); // NOW THIS WILL WORK
+    setDialogIcon(icon);
     setShowDialog(true);
   };
 
@@ -156,38 +161,59 @@ export default function ModeratorDashboard({ navigation }) {
       });
       
       try {
-        await NotificationService.notifyRecipeAuthor(recipe.authorId, getLocalizedText('title', recipe) || recipe.title, 'approved');
+        await NotificationService.notifyRecipeAuthor(
+          recipe.authorId, 
+          getLocalizedText('title', recipe) || recipe.title, 
+          'approved'
+        );
       } catch (notifyError) {
         console.error('Error notifying author:', notifyError);
       }
       
-      showCustomDialog(t('moderator.success.title'), t('moderator.success.approved'), "checkmark-circle");
+      showCustomDialog(
+        t('moderator.success.title'), 
+        t('moderator.success.approved'), 
+        "checkmark-circle-outline"
+      );
       loadPendingRecipes();
       
     } catch (error) {
       console.error('Error approving recipe:', error);
-      showCustomDialog(t('moderator.errors.title'), `${t('moderator.errors.approveFailed')} ${error.message}`, "close-circle");
+      showCustomDialog(
+        t('moderator.errors.title'), 
+        `${t('moderator.errors.approveFailed')} ${error.message}`, 
+        "close-circle-outline"
+      );
     }
   };
 
   const handleRejectAction = async (recipe) => {
     try {
-      const recipeDoc = await getDoc(doc(db, 'recipes', recipe.id));
-      const recipeData = recipeDoc.data();
-      
       await deleteDoc(doc(db, 'recipes', recipe.id));
       
       try {
-        await NotificationService.notifyRecipeAuthor(recipe.authorId, getLocalizedText('title', recipe) || recipe.title, 'rejected');
+        await NotificationService.notifyRecipeAuthor(
+          recipe.authorId, 
+          getLocalizedText('title', recipe) || recipe.title, 
+          'rejected'
+        );
       } catch (notifyError) {
         console.error('Error notifying author:', notifyError);
       }
       
-      showCustomDialog(t('moderator.success.title'), t('moderator.success.rejected'), "checkmark-circle");
+      showCustomDialog(
+        t('moderator.success.title'), 
+        t('moderator.success.rejected'), 
+        "checkmark-circle-outline"
+      );
       loadPendingRecipes();
     } catch (error) {
       console.error('Error rejecting recipe:', error);
-      showCustomDialog(t('moderator.errors.title'), `${t('moderator.errors.rejectFailed')} ${error.message}`, "close-circle");
+      showCustomDialog(
+        t('moderator.errors.title'), 
+        `${t('moderator.errors.rejectFailed')} ${error.message}`, 
+        "close-circle-outline"
+      );
     }
   };
 
@@ -221,21 +247,21 @@ export default function ModeratorDashboard({ navigation }) {
       
       if (actionType === 'approve') {
         return {
-          icon: "checkmark-circle",
-          iconColor: "#4caf50",
+          icon: "checkmark-circle-outline",
+          iconColor: isDarkMode ? "#4caf50" : "#2e7d32",
           title: t('moderator.approveConfirm.title'),
           message: t('moderator.approveConfirm.message', { title: recipeTitle }),
           confirmText: t('moderator.approve'),
-          confirmColor: "#4caf50"
+          confirmColor: isDarkMode ? "#4caf50" : "#2e7d32"
         };
       } else {
         return {
-          icon: "close-circle",
-          iconColor: "#f44336",
+          icon: "close-circle-outline",
+          iconColor: isDarkMode ? "#f44336" : "#c62828",
           title: t('moderator.rejectConfirm.title'),
           message: t('moderator.rejectConfirm.message', { title: recipeTitle }),
           confirmText: t('moderator.reject.button'),
-          confirmColor: "#f44336"
+          confirmColor: isDarkMode ? "#f44336" : "#c62828"
         };
       }
     };
@@ -249,13 +275,17 @@ export default function ModeratorDashboard({ navigation }) {
         animationType="none"
         onRequestClose={hideActionDialog}
       >
-        <View style={styles.dialogOverlay}>
+        <View style={[styles.dialogOverlay, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(0,0,0,0.5)' }]}>
           <Animated.View style={[styles.dialogContainer, { 
             backgroundColor: colors.card,
             opacity,
-            transform: [{ translateY }] 
+            transform: [{ translateY }],
+            shadowColor: isDarkMode ? '#000' : colors.primary,
           }]}>
-            <View style={[styles.dialogIcon, { backgroundColor: `${content.iconColor}20` }]}>
+            <View style={[
+              styles.dialogIcon, 
+              { backgroundColor: isDarkMode ? `${content.iconColor}20` : `${content.iconColor}10` }
+            ]}>
               <Ionicons name={content.icon} size={48} color={content.iconColor} />
             </View>
             
@@ -278,7 +308,14 @@ export default function ModeratorDashboard({ navigation }) {
             
             <View style={styles.dialogButtons}>
               <TouchableOpacity 
-                style={[styles.dialogButton, styles.cancelButton, { borderColor: colors.border }]}
+                style={[
+                  styles.dialogButton, 
+                  styles.cancelButton, 
+                  { 
+                    borderColor: colors.textSecondary,
+                    backgroundColor: 'transparent'
+                  }
+                ]}
                 onPress={hideActionDialog}
                 disabled={actionLoading}
               >
@@ -288,7 +325,13 @@ export default function ModeratorDashboard({ navigation }) {
               </TouchableOpacity>
               
               <TouchableOpacity 
-                style={[styles.dialogButton, { backgroundColor: content.confirmColor }]}
+                style={[
+                  styles.dialogButton, 
+                  { 
+                    backgroundColor: content.confirmColor,
+                    shadowColor: isDarkMode ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.2)',
+                  }
+                ]}
                 onPress={handleActionConfirm}
                 disabled={actionLoading}
               >
@@ -314,7 +357,10 @@ export default function ModeratorDashboard({ navigation }) {
     
     return (
       <TouchableOpacity 
-        style={[styles.recipeCard, { backgroundColor: colors.card }]}
+        style={[styles.recipeCard, { 
+          backgroundColor: colors.card,
+          shadowColor: isDarkMode ? '#000' : colors.primary,
+        }]}
         onPress={() => navigateToRecipeDetail(item)}
         activeOpacity={0.9}
       >
@@ -344,7 +390,10 @@ export default function ModeratorDashboard({ navigation }) {
           
           <View style={styles.actionsRow}>
             <TouchableOpacity 
-              style={styles.approveButton}
+              style={[
+                styles.approveButton,
+                { backgroundColor: isDarkMode ? '#2e7d32' : '#4caf50' }
+              ]}
               onPress={(e) => {
                 e.stopPropagation();
                 showActionConfirmation(item, 'approve');
@@ -355,7 +404,10 @@ export default function ModeratorDashboard({ navigation }) {
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.rejectButton}
+              style={[
+                styles.rejectButton,
+                { backgroundColor: isDarkMode ? '#c62828' : '#f44336' }
+              ]}
               onPress={(e) => {
                 e.stopPropagation();
                 showActionConfirmation(item, 'reject');
@@ -381,7 +433,11 @@ export default function ModeratorDashboard({ navigation }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.card }]}>
+      <View style={[styles.header, { 
+        backgroundColor: colors.card,
+        borderBottomColor: colors.border,
+        shadowColor: isDarkMode ? '#000' : colors.primary,
+      }]}>
         <Text style={[styles.headerTitle, { color: colors.text }]}>{t('moderator.title')}</Text>
         <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
           {pendingRecipes.length} {t('moderator.pendingRecipes')}
@@ -390,9 +446,17 @@ export default function ModeratorDashboard({ navigation }) {
 
       {pendingRecipes.length === 0 ? (
         <View style={[styles.emptyState, { backgroundColor: colors.background }]}>
-          <Ionicons name="checkmark-done-circle" size={80} color={colors.border} />
-          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>{t('moderator.emptyState.title')}</Text>
-          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>{t('moderator.emptyState.message')}</Text>
+          <Ionicons 
+            name="checkmark-done-circle-outline" 
+            size={80} 
+            color={colors.border} 
+          />
+          <Text style={[styles.emptyStateTitle, { color: colors.text }]}>
+            {t('moderator.emptyState.title')}
+          </Text>
+          <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+            {t('moderator.emptyState.message')}
+          </Text>
           
           <TouchableOpacity 
             style={[styles.refreshButton, { 
@@ -401,8 +465,10 @@ export default function ModeratorDashboard({ navigation }) {
             }]}
             onPress={onRefresh}
           >
-            <Ionicons name="refresh" size={20} color={colors.primary} />
-            <Text style={[styles.refreshButtonText, { color: colors.primary }]}>{t('common.refresh')}</Text>
+            <Ionicons name="refresh-outline" size={20} color={colors.primary} />
+            <Text style={[styles.refreshButtonText, { color: colors.primary }]}>
+              {t('common.refresh')}
+            </Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -424,14 +490,21 @@ export default function ModeratorDashboard({ navigation }) {
         />
       )}
 
+      {/* CustomDialog for success/error messages */}
       <CustomDialog
         visible={showDialog}
         title={dialogTitle}
         message={dialogMessage}
         icon={dialogIcon}
         onClose={() => setShowDialog(false)}
+        confirmColor={dialogIcon === 'checkmark-circle-outline' ? 
+          (isDarkMode ? '#4caf50' : '#2e7d32') : 
+          (dialogIcon === 'close-circle-outline' ? 
+            (isDarkMode ? '#f44336' : '#c62828') : 
+            colors.primary)}
       />
 
+      {/* Custom Action Dialog */}
       <ActionDialog />
     </View>
   );
@@ -444,8 +517,6 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'transparent',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
@@ -503,7 +574,6 @@ const styles = StyleSheet.create({
   recipeCard: {
     borderRadius: 12,
     marginBottom: 16,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -547,7 +617,6 @@ const styles = StyleSheet.create({
   },
   approveButton: {
     flex: 1,
-    backgroundColor: '#4caf50',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -563,7 +632,6 @@ const styles = StyleSheet.create({
   },
   rejectButton: {
     flex: 1,
-    backgroundColor: '#f44336',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -580,7 +648,6 @@ const styles = StyleSheet.create({
   // Custom Dialog Styles
   dialogOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -590,7 +657,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -636,6 +702,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   cancelButton: {
     borderWidth: 2,

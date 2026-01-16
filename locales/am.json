@@ -6,6 +6,7 @@
     "success": "ተሳክቷል",
     "cancel": "ይቅር",
     "save": "አስቀምጥ",
+    "deleting": "በመሰረዝ ላይ...",
     "delete": "ሰርዝ",
     "confirm": "አረጋግጥ",
     "search": "ፈልግ",
@@ -24,6 +25,7 @@
     "viewAll": "ሁሉንም ይመልከቱ",
     "recipesCount": "ምግቦች",
     "featuredCounter": "ከ",
+    "showAllRecipes": "ሁሉንም ምግቦች አሳይ",
      "guest": {
       "bannerMessage": "እንደ እንግዳ ተጠቃሚ እየተሰለፉ ነው። ዝግጅቶችን ለማስቀመጥ እና ማሳወቂያዎችን ለማግኘት ይመዝገቡ።",
       "signupButton": "ይመዝገቡ",
@@ -82,7 +84,16 @@
     "videoLoadError": "ቪዲዮ መጫን አልተቻለም",
     "retry": "እንደገና ሞክር",
       "createdBy": "የፈጠረው",
-    "anonymousAuthor": "ስም አልባ"
+    "anonymousAuthor": "ስም አልባ",
+    "watchOnYouTube": "በYouTube ይመልከቱ",
+    "relatedRecipes": "ተዛማጅ ምግቦች",
+    "noRelatedFound": "ተዛማጅ ምግብ አልተገኘም"
+  },
+  "recipeDetail": {
+    "relatedRecipes": "ተዛማጅ የምግብ አዘገጃጀቶች",
+    "noRelatedRecipes": "ምንም ተዛማጅ የምግብ አዘገጃጀቶች አልተገኙም",
+    "showMore": "ተጨማሪ አሳይ",
+    "showLess": "በትንሽ አሳይ"
   },
   "errors": {
     "noRecipes": "ምንም ምግብ አልተገኘም",
@@ -224,7 +235,9 @@
       "roleChange": {
         "title": "ሚና ቀይር",
         "message": "የ {name} ሚና ወደ {{role}} ይቀየር?",
-        "confirm": "ሚና ቀይር"
+        "confirm": "ሚና ቀይር",
+        "changeRole": "የተጠቃሚ ሚና ቀይር",
+        "to": "ወደ"
       },
       "roles": {
         "admin": "አስተዳዳሪ",
@@ -344,6 +357,7 @@
     "off": "ጠፍቷል",
     "loading": "በመጫን ላይ...",
     "time": {
+      "unknown": "ያልታወቀ ጊዜ",
       "justNow": "አሁን",
       "minutesAgo": "ደቂቃ በፊት",
       "hoursAgo": "ሰዓት በፊት",
@@ -368,6 +382,9 @@
     "unread": "ያልተነበበ",
     "version": "ስሪት",
     "darkMode": "ጨለማ ሞድ",
+    "justNow": "አሁን",
+    "minutesAgo": "ደቂቃዎች በፊት",
+    "hoursAgo": "ሰዓቶች በፊት",
     "lightMode": "ብርሃን ሞድ",
     "joined": "ተቀላቅሏል",
     "userProfile": "የተጠቃሚ መገለጫ",
@@ -449,6 +466,11 @@
       "moderator": "ቁጥጥር አድራጊ",
       "user": "ተጠቃሚ"
     }
+  },
+   "activity": {
+    "createdRecipe": "የምግብ አሰራር ፈጠረ",
+    "startedFollowing": "እርስዎን መከተል ጀምሯል",
+    "unknownActivity": "የማይታወቅ እንቅስቃሴ"
   },
   "login": {
     "title": "እንኳን ደህና መጡ 👋",
@@ -765,5 +787,16 @@
       "title": "በቅርቡ ይመጣል",
       "edit": "የአርትዕ ተግባር በቅርቡ ይገኛል።"
     }
+  },
+  "offline": {
+    "message": "ኦፍላይን ነዎት። አንዳንድ ባህሪያት የተገደቡ ሊሆኑ ይችላሉ።",
+    "retry": "እንደገና ሞክር",
+    "goToFavourites": "ወደ ተወዳጆች ሂድ",
+    "mode": "ኦፍላይን ሞድ",
+    "exploreOffline": "ኦፍላይን ነዎት። ኤክስፕሎር የማይገኝ ነው።",
+    "exploreOfflineTitle": "ኦፍላይን ኤክስፕሎር",
+    "exploreOfflineMessage": "የምግብ ዝግጅቶችን ለመፈለግ የበይነመረብ ግንኙነት ያስፈልጋል። የተቀመጡትን ተወዳጆችዎን ኦፍላይን ማየት ይችላሉ።",
+    "noRecipesTitle": "ምንም የምግብ ዝግጅቶች የሉም",
+    "noRecipesMessage": "ኦፍላይን ነዎት እና ምንም የምግብ ዝግጅቶች አልተቀመጡም። የተቀመጡ የምግብ ዝግጅቶችን ለማየት ወደ ተወዳጆች ይሂዱ።"
   }
 }

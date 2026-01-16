@@ -1,4 +1,4 @@
-// screens/AddRecipeScreen.js - UPDATED WITH DARK MODE AND CUSTOM DIALOGS
+// screens/AddRecipeScreen.js - FIXED UNDEFINED ID ERROR
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -22,7 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import CustomDialog from "../components/CustomDialog";
 import { NotificationService } from "../services/notificationService";
 import { useLanguage } from '../contexts/LanguageContext';
-import { useTheme } from '../contexts/ThemeContext'; // Import theme hook
+import { useTheme } from '../contexts/ThemeContext';
 
 const { width } = Dimensions.get("window");
 
@@ -38,7 +38,7 @@ const CATEGORIES = [
   { en: "Appetizer", am: "መግቢያ" }
 ];
 
-// Translation Service (same as before)
+// Translation Service - FIXED: Removed id field
 class TranslationService {
   static async translateText(text, targetLanguage) {
     if (!text || text.trim() === '') return text;
@@ -117,11 +117,9 @@ class TranslationService {
 
   static async tryGoogleTranslate(text, targetLanguage) {
     try {
-      // This is a simplified approach - in production, you'd use official Google Cloud Translation API
       const sourceLang = targetLanguage === 'am' ? 'en' : 'am';
       const langPair = targetLanguage === 'am' ? 'en-am' : 'am-en';
       
-      // Using a free translation service as fallback
       const response = await fetch(
         `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sourceLang}&tl=${targetLanguage}&dt=t&q=${encodeURIComponent(text)}`,
         {
@@ -148,7 +146,6 @@ class TranslationService {
   }
 
   static simpleWordMapping(text, targetLanguage) {
-    // Comprehensive word mapping for cooking terms
     const wordMap = {
       'en-am': {
         // Ingredients
@@ -279,11 +276,9 @@ class TranslationService {
     const map = wordMap[mapKey];
     let translated = text;
 
-    // Replace words while preserving case
     Object.keys(map).forEach(word => {
       const regex = new RegExp(`\\b${word}\\b`, 'gi');
       translated = translated.replace(regex, (match) => {
-        // Preserve case: if original was capitalized, capitalize translation
         if (match[0] === match[0].toUpperCase()) {
           return map[word].charAt(0).toUpperCase() + map[word].slice(1);
         }
@@ -296,7 +291,28 @@ class TranslationService {
 
   static async translateRecipe(recipeData, sourceLanguage) {
     const targetLanguage = sourceLanguage === 'en' ? 'am' : 'en';
-    const translatedData = JSON.parse(JSON.stringify(recipeData));
+    
+    // Create a new object for translation - DO NOT include id field
+    const translatedData = {
+      // Basic fields
+      imageBase64: recipeData.imageBase64,
+      hasImage: recipeData.hasImage,
+      videoURL: recipeData.videoURL,
+      authorId: recipeData.authorId,
+      authorEmail: recipeData.authorEmail,
+      authorName: recipeData.authorName,
+      approved: recipeData.approved,
+      originalLanguage: recipeData.originalLanguage,
+      autoTranslated: recipeData.autoTranslated,
+      translationError: recipeData.translationError,
+      
+      // Language-specific fields (will be filled below)
+      title: { ...recipeData.title },
+      description: { ...recipeData.description },
+      category: { ...recipeData.category },
+      ingredients: { ...recipeData.ingredients },
+      steps: { ...recipeData.steps }
+    };
 
     console.log(`Starting recipe translation from ${sourceLanguage} to ${targetLanguage}`);
 
@@ -319,7 +335,7 @@ class TranslationService {
         );
       }
 
-      // Translate ingredients - handle line by line for better accuracy
+      // Translate ingredients
       if (recipeData.ingredients && recipeData.ingredients[sourceLanguage]) {
         console.log('Translating ingredients...');
         const ingredientsText = recipeData.ingredients[sourceLanguage];
@@ -329,7 +345,7 @@ class TranslationService {
           const translatedLines = await Promise.all(
             lines.map(async (line) => {
               const translatedLine = await this.translateText(line.trim(), targetLanguage);
-              return translatedLine || line.trim(); // Fallback to original if translation fails
+              return translatedLine || line.trim();
             })
           );
           translatedData.ingredients[targetLanguage] = translatedLines.join('\n');
@@ -341,7 +357,7 @@ class TranslationService {
         }
       }
 
-      // Translate steps - handle line by line
+      // Translate steps
       if (recipeData.steps && recipeData.steps[sourceLanguage]) {
         console.log('Translating steps...');
         const stepsText = recipeData.steps[sourceLanguage];
@@ -350,8 +366,7 @@ class TranslationService {
           const lines = stepsText.split('\n').filter(line => line.trim());
           const translatedLines = await Promise.all(
             lines.map(async (line, index) => {
-              // Add step numbers if they're missing
-              const stepText = line.replace(/^\d+\.?\s*/, ''); // Remove existing numbers
+              const stepText = line.replace(/^\d+\.?\s*/, '');
               const translatedStep = await this.translateText(stepText.trim(), targetLanguage);
               return `${index + 1}. ${translatedStep || stepText.trim()}`;
             })
@@ -370,7 +385,6 @@ class TranslationService {
         console.log('Translating category...');
         const categoryText = recipeData.category[sourceLanguage];
         
-        // Find matching category
         const predefinedCategory = CATEGORIES.find(
           cat => cat[sourceLanguage].toLowerCase() === categoryText.toLowerCase() ||
                  (cat.en && cat.en.toLowerCase() === categoryText.toLowerCase()) ||
@@ -380,7 +394,6 @@ class TranslationService {
         if (predefinedCategory) {
           translatedData.category[targetLanguage] = predefinedCategory[targetLanguage];
         } else {
-          // If not found in predefined, try to translate
           translatedData.category[targetLanguage] = await this.translateText(
             categoryText, 
             targetLanguage
@@ -397,7 +410,6 @@ class TranslationService {
 
     } catch (error) {
       console.error('Recipe translation failed:', error);
-      // Return partial translation with error flag
       return {
         ...translatedData,
         autoTranslated: false,
@@ -408,7 +420,6 @@ class TranslationService {
 }
 
 export default function AddRecipeScreen({ navigation }) {
-  // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
@@ -420,7 +431,6 @@ export default function AddRecipeScreen({ navigation }) {
   const [translating, setTranslating] = useState(false);
   const [userData, setUserData] = useState(null);
   
-  // UI state
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [inputLanguage, setInputLanguage] = useState("en");
   const [showDialog, setShowDialog] = useState(false);
@@ -429,7 +439,7 @@ export default function AddRecipeScreen({ navigation }) {
   const [dialogIcon, setDialogIcon] = useState("alert-circle-outline");
 
   const { locale, t } = useLanguage();
-  const { colors, isDarkMode } = useTheme(); // Theme hook
+  const { colors, isDarkMode } = useTheme();
 
   useEffect(() => {
     loadUserData();
@@ -633,6 +643,7 @@ export default function AddRecipeScreen({ navigation }) {
       const base64 = await FileSystem.readAsStringAsync(image, {
         encoding: FileSystem.EncodingType.Base64,
       });
+      
 
       // Prepare initial recipe data in the input language
       const initialRecipeData = {
@@ -660,7 +671,6 @@ export default function AddRecipeScreen({ navigation }) {
         authorEmail: user.email,
         authorName: userData?.name || user.email.split('@')[0],
         approved: false,
-        createdAt: serverTimestamp(),
         originalLanguage: inputLanguage,
         autoTranslated: false,
         translationError: false
@@ -677,8 +687,19 @@ export default function AddRecipeScreen({ navigation }) {
       setTranslating(false);
       console.log('Translation process completed');
 
+      // Create final recipe data with serverTimestamp
+      const finalRecipeData = {
+        ...translatedRecipeData,
+        createdAt: serverTimestamp(), // Add serverTimestamp here
+      };
+
+      console.log('Saving recipe to Firestore...');
+      console.log('Final recipe data structure:', Object.keys(finalRecipeData));
+      
       // Save the fully translated recipe to Firestore
-      const docRef = await addDoc(collection(db, "recipes"), translatedRecipeData);
+      const docRef = await addDoc(collection(db, "recipes"), finalRecipeData);
+      
+      console.log('Recipe saved successfully with ID:', docRef.id);
       
       const targetLanguageName = inputLanguage === 'en' 
         ? t('addRecipe.languageSelector.amharic') 
@@ -697,7 +718,7 @@ export default function AddRecipeScreen({ navigation }) {
         await NotificationService.notifyCurrentUser(
           t('addRecipe.success.notificationTitle'),
           successMessage,
-          { type: 'recipe_submitted', recipeTitle: title.trim() }
+          { type: 'recipe_submitted', recipeTitle: title.trim(), recipeId: docRef.id }
         );
       } catch (notifyError) {
         console.error('Error notifying user:', notifyError);
@@ -716,7 +737,8 @@ export default function AddRecipeScreen({ navigation }) {
       
     } catch (err) {
       setTranslating(false);
-      console.log("Error uploading recipe:", err);
+      console.error("Error uploading recipe:", err);
+      console.error("Error details:", err.message);
       showCustomDialog(
         t('addRecipe.errors.uploadTitle'),
         err.message || t('addRecipe.errors.uploadMessage'),

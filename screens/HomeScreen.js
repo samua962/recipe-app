@@ -1,4 +1,4 @@
-// screens/HomeScreen.js - UPDATED WITH GUEST DIALOG
+// screens/HomeScreen.js - UPDATED WITH CONSISTENT CATEGORY HANDLING
 import React, { useEffect, useState, useRef } from "react";
 import {
   View,
@@ -15,17 +15,30 @@ import {
   RefreshControl,
 } from "react-native";
 import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
-import { db } from "../firebaseConfig";
+import { db, auth } from "../firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useLocalizedRecipes } from "../hooks/useLocalizedRecipes";
 import { useTheme } from "../contexts/ThemeContext";
-//import GuestRestrictionDialog from "../components/GuestRestrictionDialog";
 import GuestRestrictionDialog from "../components/GuestRestrictionDialog ";
 import useGuestRestriction from "../hooks/useGuestRestriction";
-import LanguageSwitcher from "../components/LanguageSwitcher";
+import { useNetwork } from "../contexts/NetworkContext";
+import OfflineBanner from "../components/OfflineBanner";
+import { useGuest } from "../contexts/GuestContext";
 
 const { width: screenWidth } = Dimensions.get('window');
+
+// CATEGORY DEFINITIONS - MATCHING AddRecipeScreen.js EXACTLY
+const CATEGORIES = [
+  { id: 'breakfast', en: "Breakfast", am: "ቁርስ", icon: 'cafe-outline' },
+  { id: 'lunch', en: "Lunch", am: "ምሳ", icon: 'restaurant-outline' },
+  { id: 'dinner', en: "Dinner", am: "እራት", icon: 'fast-food-outline' },
+  { id: 'dessert', en: "Dessert", am: "ምርጥ ምግብ", icon: 'ice-cream-outline' },
+  { id: 'drinks', en: "Drinks", am: "መጠጦች", icon: 'wine-outline' },
+  { id: 'vegetarian', en: "Vegetarian", am: "አትክልት", icon: 'leaf-outline' },
+  { id: 'meat', en: "Meat", am: "ስጋ ምግብ", icon: 'pizza-outline' },
+  { id: 'appetizer', en: "Appetizer", am: "መግቢያ", icon: 'fast-food-outline' }
+];
 
 export default function HomeScreen({ navigation }) {
   const [recipes, setRecipes] = useState([]);
@@ -33,21 +46,8 @@ export default function HomeScreen({ navigation }) {
   const [featuredIndex, setFeaturedIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Categories with translation keys
- const categories = [
-  { key: "all", value: "All" },
-  { key: "breakfast", value: "Breakfast" },
-  { key: "lunch", value: "Lunch" },
-  { key: "dinner", value: "Dinner" },
-  { key: "dessert", value: "Dessert" },
-  { key: "drinks", value: "Drinks" },
-  { key: "vegetarian", value: "Vegetarian" },
-  { key: "meat", value: "Meat" },
-  { key: "appetizer", value: "Appetizer" }  
-];
-  
-  const [selectedCategory, setSelectedCategory] = useState(categories[0]);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState({ id: 'all', name: 'All', icon: 'grid' });
   
   const intervalRef = useRef(null);
   
@@ -61,14 +61,60 @@ export default function HomeScreen({ navigation }) {
   const { getLocalizedRecipes, getLocalizedRecipe } = useLocalizedRecipes();
   const { colors, isDarkMode } = useTheme();
   const { showGuestRestriction, GuestDialogProps } = useGuestRestriction();
+  const { isOnline, refreshNetworkStatus, isLoading: networkLoading } = useNetwork();
+  const { isGuest } = useGuest();
+
+  // Category filters - using same structure as AddRecipeScreen
+  const categoriesWithAll = [
+    { id: 'all', name: t('categories.all'), icon: 'grid' },
+    ...CATEGORIES.map(cat => ({
+      id: cat.id,
+      name: t(`categories.${cat.id}`),
+      icon: cat.icon
+    }))
+  ];
 
   useEffect(() => {
     loadRecipes();
+    if (!isGuest) {
+      loadUnreadNotifications();
+    }
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (!isGuest) {
+        loadUnreadNotifications();
+      }
+    });
+    
+    return unsubscribe;
+  }, [navigation, isGuest]);
+
+  // NEW: Function to load unread notifications count
+  const loadUnreadNotifications = async () => {
+    try {
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const notificationsRef = collection(db, "notifications");
+      const q = query(
+        notificationsRef, 
+        where("userId", "==", user.uid),
+        where("read", "==", false)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      setUnreadNotifications(querySnapshot.size);
+      
+    } catch (error) {
+      console.error("Error loading notifications:", error);
+    }
+  };
 
   // Featured recipe rotation
   useEffect(() => {
-    if (recipes.length > 0) {
+    if (recipes.length > 0 && isOnline) {
       intervalRef.current = setInterval(() => {
         Animated.parallel([
           Animated.timing(scaleAnim, {
@@ -112,9 +158,19 @@ export default function HomeScreen({ navigation }) {
       }, 5000);
     }
     return () => clearInterval(intervalRef.current);
-  }, [recipes, fadeAnim, slideAnim, scaleAnim]);
+  }, [recipes, fadeAnim, slideAnim, scaleAnim, isOnline]);
 
   const loadRecipes = async () => {
+    // Check if offline
+    if (!isOnline) {
+      console.log("Offline mode - recipes not loaded");
+      setLoading(false);
+      setRefreshing(false);
+      setRecipes([]);
+      setFilteredRecipes([]);
+      return;
+    }
+
     try {
       const q = query(
         collection(db, "recipes"),
@@ -138,43 +194,69 @@ export default function HomeScreen({ navigation }) {
 
   // Pull to refresh handler
   const onRefresh = React.useCallback(() => {
+    // Don't refresh if offline
+    if (!isOnline) {
+      setRefreshing(false);
+      return;
+    }
     setRefreshing(true);
     loadRecipes();
-  }, []);
+    if (!isGuest) {
+      loadUnreadNotifications();
+    }
+  }, [isOnline, isGuest]);
 
-  // Category filter
+  // Helper function to get category from recipe (consistent with AddRecipeScreen)
+  const getRecipeCategory = (recipe) => {
+    if (!recipe.category) return '';
+    
+    // If category is stored as multi-language object (new format)
+    if (typeof recipe.category === 'object') {
+      return recipe.category[locale] || recipe.category.en || recipe.category.am || '';
+    }
+    
+    // If category is stored as string (old format)
+    return recipe.category;
+  };
+
+  // Helper function to get normalized category ID for filtering
+  const getNormalizedCategoryId = (recipe) => {
+    const categoryString = getRecipeCategory(recipe).toLowerCase().trim();
+    if (!categoryString) return '';
+    
+    // Try to match with predefined categories
+    for (const cat of CATEGORIES) {
+      if (categoryString === cat.en.toLowerCase() || categoryString === cat.am) {
+        return cat.id;
+      }
+    }
+    
+    // Try partial matching
+    if (categoryString.includes('breakfast') || categoryString.includes('ቁርስ')) return 'breakfast';
+    if (categoryString.includes('lunch') || categoryString.includes('ምሳ')) return 'lunch';
+    if (categoryString.includes('dinner') || categoryString.includes('እራት')) return 'dinner';
+    if (categoryString.includes('dessert') || categoryString.includes('ምርጥ')) return 'dessert';
+    if (categoryString.includes('drink') || categoryString.includes('መጠጥ')) return 'drinks';
+    if (categoryString.includes('vegetarian') || categoryString.includes('አትክልት')) return 'vegetarian';
+    if (categoryString.includes('meat') || categoryString.includes('ስጋ')) return 'meat';
+    if (categoryString.includes('appetizer') || categoryString.includes('መግቢያ')) return 'appetizer';
+    
+    return '';
+  };
+
+  // Category filter - updated to work with both object and string categories
   const handleCategorySelect = (category) => {
-  setSelectedCategory(category);
-  if (category.value === "All") {
-    setFilteredRecipes(recipes);
-  } else {
-    const localizedRecipes = getLocalizedRecipes(recipes);
-    const filtered = localizedRecipes.filter((r) => {
-      const recipeCategory = r.category?.toLowerCase();
-      const selectedCategoryValue = category.value.toLowerCase();
-      
-      // Map Amharic categories to English for comparison
-      const amharicToEnglishMap = {
-        "ቁርስ": "breakfast",
-        "ምሳ": "lunch",
-        "እራት": "dinner",
-        "ምርጥ ምግብ": "dessert",
-        "መጠጦች": "drinks",
-        "አትክልት": "vegetarian",
-        "ስጋ ምግብ": "meat",
-        "መግቢያ": "appetizer"
-      };
-      
-      // Check if recipe category matches in either language
-      return (
-        recipeCategory === selectedCategoryValue ||
-        amharicToEnglishMap[recipeCategory] === selectedCategoryValue ||
-        recipeCategory === amharicToEnglishMap[selectedCategoryValue]
-      );
-    });
-    setFilteredRecipes(filtered);
-  }
-};
+    setSelectedCategory(category);
+    if (category.id === 'all') {
+      setFilteredRecipes(recipes);
+    } else {
+      const filtered = recipes.filter(recipe => {
+        const normalizedId = getNormalizedCategoryId(recipe);
+        return normalizedId === category.id;
+      });
+      setFilteredRecipes(filtered);
+    }
+  };
 
   // Helper function to get image source
   const getImageSource = (item) => {
@@ -200,6 +282,11 @@ export default function HomeScreen({ navigation }) {
 
   // Handle add recipe button press
   const handleAddRecipePress = () => {
+    // Check if offline
+    if (!isOnline) {
+      return;
+    }
+    
     if (showGuestRestriction(
       t('recipe.add'),
       t('home.guest.addRecipeTitle'),
@@ -209,8 +296,25 @@ export default function HomeScreen({ navigation }) {
     }
   };
 
+  // Handle retry connection
+  const handleRetryConnection = async () => {
+    const connected = await refreshNetworkStatus();
+    if (connected) {
+      loadRecipes();
+      if (!isGuest) {
+        loadUnreadNotifications();
+      }
+    }
+  };
+
+  // Handle go to favourites
+  const handleGoToFavourites = () => {
+    navigation.navigate("Saved");
+  };
+
   const renderRecipeCard = ({ item, index }) => {
     const localizedRecipe = getLocalizedRecipe(item);
+    const category = getRecipeCategory(item);
     
     return (
       <TouchableOpacity
@@ -226,7 +330,7 @@ export default function HomeScreen({ navigation }) {
           <View style={styles.recipeMeta}>
             <View style={[styles.recipeCategoryBadge, { backgroundColor: colors.badgeBg }]}>
               <Text style={[styles.recipeCategoryText, { color: colors.textSecondary }]}>
-                {localizedRecipe.category}
+                {category || t('categories.all')}
               </Text>
             </View>
             <View style={styles.recipeTime}>
@@ -246,45 +350,32 @@ export default function HomeScreen({ navigation }) {
       style={[
         styles.categoryItem,
         { backgroundColor: colors.card },
-        selectedCategory.key === item.key && [styles.activeCategoryItem, { backgroundColor: colors.primary }],
+        selectedCategory.id === item.id && [styles.activeCategoryItem, { backgroundColor: colors.primary }],
       ]}
       onPress={() => handleCategorySelect(item)}
     >
       <View style={[
         styles.categoryIcon,
         { backgroundColor: isDarkMode ? 'rgba(243, 125, 28, 0.1)' : '#fff5e6' },
-        selectedCategory.key === item.key && styles.activeCategoryIcon
+        selectedCategory.id === item.id && styles.activeCategoryIcon
       ]}>
         <Ionicons 
-          name={getCategoryIcon(item.key)} 
+          name={item.icon} 
           size={20} 
-          color={selectedCategory.key === item.key ? "#fff" : colors.primary} 
+          color={selectedCategory.id === item.id ? "#fff" : colors.primary} 
         />
       </View>
       <Text style={[
         styles.categoryName,
         { color: colors.textSecondary },
-        selectedCategory.key === item.key && styles.activeCategoryName
+        selectedCategory.id === item.id && styles.activeCategoryName
       ]}>
-        {t(`categories.${item.key}`)}
+        {item.name}
       </Text>
     </TouchableOpacity>
   );
 
-  const getCategoryIcon = (category) => {
-    switch (category.toLowerCase()) {
-      case 'breakfast': return 'cafe-outline';
-      case 'lunch': return 'restaurant-outline';
-      case 'dinner': return 'fast-food-outline';
-      case 'dessert': return 'ice-cream-outline';
-      case 'drinks': return 'wine-outline';
-      case 'vegetarian': return 'leaf-outline';
-      case 'meat': return 'pizza-outline';
-      default: return 'fast-food-outline';
-    }
-  };
-
-  if (loading && !refreshing) {
+  if ((loading && !refreshing) || networkLoading) {
     return (
       <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -295,6 +386,7 @@ export default function HomeScreen({ navigation }) {
 
   // Get the current featured recipe
   const featuredRecipe = recipes[featuredIndex] ? getLocalizedRecipe(recipes[featuredIndex]) : null;
+  const featuredCategory = recipes[featuredIndex] ? getRecipeCategory(recipes[featuredIndex]) : '';
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -309,6 +401,7 @@ export default function HomeScreen({ navigation }) {
             tintColor={colors.primary}
             title={t('home.pullToRefresh')}
             titleColor={colors.primary}
+            enabled={isOnline}
           />
         }
       >
@@ -321,17 +414,33 @@ export default function HomeScreen({ navigation }) {
           </TouchableOpacity>
           <Text style={[styles.logo, { color: colors.primary }]}>{t('home.title')}</Text>
           <View style={styles.headerRight}>
-             
+            {/* Updated Notification Button with Badge */}
             <TouchableOpacity 
               style={styles.notificationButton}
               onPress={handleNotificationPress}
             >
-             
-              <Ionicons name="notifications-outline" size={24} color={colors.text} />
+              <View style={styles.notificationIconContainer}>
+                <Ionicons name="notifications-outline" size={24} color={colors.text} />
+                {!isGuest && unreadNotifications > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>
+                      {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           </View>
-            <LanguageSwitcher />
         </View>
+
+        {/* Offline Banner */}
+        {!isOnline && (
+          <OfflineBanner 
+            onRetry={handleRetryConnection}
+            onGoToFavourites={handleGoToFavourites}
+            showFavouritesButton={true}
+          />
+        )}
 
         {/* Guest Info Banner */}
         {GuestDialogProps.isGuest && (
@@ -351,8 +460,8 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* Featured Recipe Section */}
-        {featuredRecipe && (
+        {/* Featured Recipe Section - Only show if online and has recipes */}
+        {featuredRecipe && isOnline && recipes.length > 0 && (
           <View style={styles.featuredSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.featured')}</Text>
@@ -392,7 +501,7 @@ export default function HomeScreen({ navigation }) {
                     </View>
                     <View style={styles.metaItem}>
                       <Ionicons name="restaurant-outline" size={16} color="#fff" />
-                      <Text style={styles.featuredText}>{featuredRecipe.category}</Text>
+                      <Text style={styles.featuredText}>{featuredCategory || t('categories.all')}</Text>
                     </View>
                     <View style={styles.metaItem}>
                       <Ionicons name="person-outline" size={16} color="#fff" />
@@ -418,71 +527,107 @@ export default function HomeScreen({ navigation }) {
           </View>
         )}
 
-        {/* Categories Section */}
-        <View style={styles.categoriesSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.categories')}</Text>
-            <Text style={[styles.recipesCount, { color: colors.primary }]}>{recipes.length} {t('home.recipesCount')}</Text>
-          </View>
-          <FlatList
-            data={categories}
-            horizontal
-            keyExtractor={(item) => item.key}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesList}
-            renderItem={renderCategoryItem}
-          />
-        </View>
-
-        {/* Popular Recipes Section */}
-        <View style={styles.recipesSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {selectedCategory.value === "All" ? t('home.popular') : t(`categories.${selectedCategory.key}`)}
+        {/* Offline Message if no recipes */}
+        {!isOnline && recipes.length === 0 && (
+          <View style={[styles.offlineMessage, { backgroundColor: colors.card }]}>
+            <Ionicons name="cloud-offline-outline" size={50} color={colors.textSecondary} />
+            <Text style={[styles.offlineMessageTitle, { color: colors.text }]}>
+              {t('offline.noRecipesTitle')}
             </Text>
-            <TouchableOpacity>
-              <Text style={[styles.seeAllText, { color: colors.primary }]}>{t('home.viewAll')}</Text>
+            <Text style={[styles.offlineMessageText, { color: colors.textSecondary }]}>
+              {t('offline.noRecipesMessage')}
+            </Text>
+            <TouchableOpacity 
+              style={[styles.offlineActionButton, { backgroundColor: colors.primary }]}
+              onPress={handleGoToFavourites}
+            >
+              <Ionicons name="heart" size={20} color="#fff" />
+              <Text style={styles.offlineActionButtonText}>
+                {t('offline.goToFavourites')}
+              </Text>
             </TouchableOpacity>
           </View>
+        )}
 
-          {filteredRecipes.length > 0 ? (
-            <FlatList
-              data={filteredRecipes.slice(0, 8)}
-              renderItem={renderRecipeCard}
-              keyExtractor={(item) => item.id}
-              numColumns={2}
-              scrollEnabled={false}
-              contentContainerStyle={styles.recipesGrid}
-              columnWrapperStyle={styles.recipeRow}
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="fast-food-outline" size={64} color={colors.border} />
-              <Text style={[styles.emptyStateTitle, { color: colors.text }]}>{t('errors.noRecipes')}</Text>
-              <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
-                {t('errors.noCategoryRecipes')}
-              </Text>
+        {/* Categories Section - Only show if online */}
+        {isOnline && recipes.length > 0 && (
+          <View style={styles.categoriesSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('home.categories')}</Text>
+              <Text style={[styles.recipesCount, { color: colors.primary }]}>{recipes.length} {t('home.recipesCount')}</Text>
             </View>
-          )}
-        </View>
+            <FlatList
+              data={categoriesWithAll}
+              horizontal
+              keyExtractor={(item) => item.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesList}
+              renderItem={renderCategoryItem}
+            />
+          </View>
+        )}
+
+        {/* Popular Recipes Section - Only show if online and has recipes */}
+        {isOnline && recipes.length > 0 && (
+          <View style={styles.recipesSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {selectedCategory.id === 'all' ? t('home.popular') : selectedCategory.name}
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedCategory(categoriesWithAll[0])}>
+                <Text style={[styles.seeAllText, { color: colors.primary }]}>{t('home.viewAll')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {filteredRecipes.length > 0 ? (
+              <FlatList
+                data={filteredRecipes.slice(0, 8)}
+                renderItem={renderRecipeCard}
+                keyExtractor={(item) => item.id}
+                numColumns={2}
+                scrollEnabled={false}
+                contentContainerStyle={styles.recipesGrid}
+                columnWrapperStyle={styles.recipeRow}
+              />
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="fast-food-outline" size={64} color={colors.border} />
+                <Text style={[styles.emptyStateTitle, { color: colors.text }]}>{t('errors.noRecipes')}</Text>
+                <Text style={[styles.emptyStateText, { color: colors.textSecondary }]}>
+                  {t('errors.noCategoryRecipes')}
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.resetFilterButton, { backgroundColor: colors.primary }]}
+                  onPress={() => setSelectedCategory(categoriesWithAll[0])}
+                >
+                  <Text style={styles.resetFilterButtonText}>{t('home.showAllRecipes')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
-      {/* Floating Add Button */}
-      <TouchableOpacity
-        style={[styles.addButton, { backgroundColor: colors.primary }]}
-        onPress={handleAddRecipePress}
-        activeOpacity={0.9}
-      >
-        <View style={styles.addButtonInner}>
-          <Ionicons name="add" size={28} color="#fff" />
-        </View>
-      </TouchableOpacity>
+      {/* Floating Add Button - Only show if online */}
+      {isOnline && (
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
+          onPress={handleAddRecipePress}
+          activeOpacity={0.9}
+        >
+          <View style={styles.addButtonInner}>
+            <Ionicons name="add" size={28} color="#fff" />
+          </View>
+        </TouchableOpacity>
+      )}
 
       {/* Guest Restriction Dialog */}
       <GuestRestrictionDialog {...GuestDialogProps} />
     </SafeAreaView>
   );
 }
+
+
 
 const styles = StyleSheet.create({
   container: {
@@ -507,8 +652,33 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "700",
   },
+  // NEW: Notification icon with badge styles
   notificationButton: {
     padding: 4,
+    position: "relative",
+  },
+  notificationIconContainer: {
+    position: "relative",
+  },
+  notificationBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#ff4757",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: "#fff",
+    zIndex: 10,
+  },
+  notificationBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "bold",
   },
   guestInfoBanner: {
     flexDirection: 'row',
@@ -532,6 +702,43 @@ const styles = StyleSheet.create({
   guestSignupButtonText: {
     color: '#fff',
     fontSize: 12,
+    fontWeight: '600',
+  },
+  offlineMessage: {
+    marginHorizontal: 16,
+    marginBottom: 25,
+    padding: 24,
+    borderRadius: 16,
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  offlineMessageTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  offlineMessageText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  offlineActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
+  },
+  offlineActionButtonText: {
+    color: '#fff',
+    fontSize: 14,
     fontWeight: '600',
   },
   featuredSection: {

@@ -7,6 +7,7 @@
     "cancel": "Cancel",
     "save": "Save",
     "delete": "Delete",
+    "deleting": "Deleting...",
     "confirm": "Confirm",
     "search": "Search",
     "ok": "OK",
@@ -27,6 +28,7 @@
     "viewAll": "View All",
     "recipesCount": "recipes",
     "featuredCounter": "of",
+    "showAllRecipes": "Show All Recipes",
      "guest": {
     "bannerMessage": "You're browsing as a guest. Sign up to save recipes and get notifications.",
     "signupButton": "Sign Up",
@@ -73,7 +75,16 @@
     "videoLoadError": "Failed to load video",
     "retry": "Retry",
     "createdBy": "Created by",
-    "anonymousAuthor": "Anonymous Chef"
+    "anonymousAuthor": "Anonymous Chef",
+    "watchOnYouTube": "Watch on YouTube",
+    "relatedRecipes": "Related Recipes",
+    "noRelatedFound": "No related recipes found"
+  },
+   "recipeDetail": {
+    "relatedRecipes": "Related Recipes",
+    "noRelatedRecipes": "No related recipes found",
+    "showMore": "Show More",
+    "showLess": "Show Less"
   },
   "errors": {
     "noRecipes": "No recipes found",
@@ -224,7 +235,9 @@
       "roleChange": {
         "title": "Change User Role",
         "message": "Change {name}'s role to {newRole}?",
-        "confirm": "Change Role"
+        "confirm": "Change Role",
+        "changeRole": "Change role of user",
+        "to": "to"
       },
       "roles": {
         "admin": "Admin",
@@ -345,6 +358,7 @@
     "off": "Off",
     "success": "Success",
     "time": {
+      "unknown": "Unknown time",
       "justNow": "Just now",
       "minutesAgo": "minutes ago",
       "hoursAgo": "hours ago",
@@ -381,7 +395,9 @@
     "noActivity": "No recent activity",
     "viewPublicProfile": "View Public Profile",
     "privacySecurity": "Privacy & Security",
-    
+     "justNow": "just now",
+    "minutesAgo": "minutes ago",
+    "hoursAgo": "hours ago",
     
     "follow": "Follow",
     "following": "Following",
@@ -447,7 +463,11 @@
       "user": "User"
     }
   }
-,
+, "activity": {
+    "createdRecipe": "Created recipe",
+    "startedFollowing": "started following you",
+    "unknownActivity": "Unknown activity"
+  },
   "login": {
     "title": "Welcome Back 👋",
     "subtitle": "Login to your account",
@@ -521,7 +541,8 @@
       "title": "I'm adding this recipe in:",
       "english": "English",
       "amharic": "Amharic",
-      "hint": "Don't worry about translation! We'll automatically translate it to {language}"
+      "hint": "Don't worry about translation! We'll automatically translate it to {language}",
+      "success": "translation successful! "
     },
     "sections": {
       "image": "Recipe Image",
@@ -776,6 +797,16 @@
       "title": "Coming Soon",
       "edit": "Edit functionality will be available soon."
     }
+  },"offline": {
+    "message": "You're offline. Some features may be limited.",
+    "retry": "Retry",
+    "goToFavourites": "Go to Favourites",
+    "mode": "Offline Mode",
+    "exploreOffline": "You're offline. Explore is not available.",
+    "exploreOfflineTitle": "Explore Offline",
+    "exploreOfflineMessage": "Explore recipes requires an internet connection. You can view your saved favourites offline.",
+    "noRecipesTitle": "No Recipes Available",
+    "noRecipesMessage": "You're offline and no recipes are cached. Go to Favourites to view saved recipes."
   }
   
   

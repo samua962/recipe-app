@@ -131,9 +131,9 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
     }
   };
 
+  // CHANGED: Navigate to UserProfileScreen instead of showing dialog
   const showUserDetails = (user) => {
-    setSelectedUser(user);
-    setShowUserDialog(true);
+    navigation.navigate('UserProfile', { userId: user.id });
   };
 
   const getRoleColor = (role) => {
@@ -157,31 +157,33 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
     });
 
     const getDialogContent = () => {
-      if (actionType === 'delete') {
-        return {
-          icon: "trash-outline",
-          iconColor: "#e74c3c",
-          title: t('admin.users.delete.title'),
-          message: `${t('admin.users.delete.confirmMessage')} ${targetUser?.name}? ${t('admin.users.delete.warning')}`,
-          confirmText: t('admin.users.delete.button'),
-          confirmColor: "#e74c3c"
-        };
-      } else if (actionType.startsWith('role_')) {
-        const newRole = actionType.replace('role_', '');
-        return {
-          icon: "person-outline",
-          iconColor: "#3498db",
-          title: t('admin.users.roleChange.title'),
-          message: t('admin.users.roleChange.message', { 
-            name: targetUser?.name, 
-            newRole: t(`admin.users.roles.${newRole}`) 
-          }),
-          confirmText: t('admin.users.roleChange.confirm'),
-          confirmColor: "#3498db"
-        };
-      }
-      return null;
+  if (actionType === 'delete') {
+    return {
+      icon: "trash-outline",
+      iconColor: "#e74c3c",
+      title: t('admin.users.delete.title'),
+      message: `${t('admin.users.delete.confirmMessage')} "${targetUser?.name}"? ${t('admin.users.delete.warning')}`,
+      confirmText: t('admin.users.delete.button'),
+      confirmColor: "#e74c3c"
     };
+  } else if (actionType.startsWith('role_')) {
+    const newRole = actionType.replace('role_', '');
+    const newRoleName = t(`admin.users.roles.${newRole}`);
+    
+    // Create a more explicit message
+    const message = `${t('admin.users.roleChange.changeRole')} "${targetUser?.name}" ${t('admin.users.roleChange.to')} "${newRoleName}"?`;
+    
+    return {
+      icon: "person-outline",
+      iconColor: "#3498db",
+      title: t('admin.users.roleChange.title'),
+      message: message,
+      confirmText: t('admin.users.roleChange.confirm'),
+      confirmColor: "#3498db"
+    };
+  }
+  return null;
+};
 
     const content = getDialogContent();
     if (!content) return null;
@@ -381,78 +383,6 @@ export default function UsersSection({ users, recipes, onRefresh, refreshing, on
           }
         />
       )}
-
-      {/* User Detail Dialog */}
-      <Modal
-        visible={showUserDialog}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowUserDialog(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {t('admin.users.details.title')}
-              </Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={() => setShowUserDialog(false)}
-              >
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            {selectedUser && (
-              <View style={styles.userDetails}>
-                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    {t('admin.users.details.name')}:
-                  </Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>{selectedUser.name}</Text>
-                </View>
-                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    {t('admin.users.details.email')}:
-                  </Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>{selectedUser.email}</Text>
-                </View>
-                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    {t('admin.users.details.role')}:
-                  </Text>
-                  <View style={[styles.roleBadge, { backgroundColor: getRoleColor(selectedUser.role) }]}>
-                    <Text style={styles.roleText}>{t(`admin.users.roles.${selectedUser.role}`)}</Text>
-                  </View>
-                </View>
-                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    {t('admin.users.details.recipesPosted')}:
-                  </Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>{getUserRecipeCount(selectedUser.id)}</Text>
-                </View>
-                <View style={[styles.detailRow, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                    {t('admin.users.details.memberSince')}:
-                  </Text>
-                  <Text style={[styles.detailValue, { color: colors.text }]}>
-                    {selectedUser.createdAt?.toDate?.()?.toLocaleDateString() || t('common.unknown')}
-                  </Text>
-                </View>
-              </View>
-            )}
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity 
-                style={[styles.modalButton, { backgroundColor: colors.primary }]}
-                onPress={() => setShowUserDialog(false)}
-              >
-                <Text style={styles.modalButtonText}>{t('common.close')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
 
       {/* Info Dialog */}
       <CustomDialog
@@ -657,65 +587,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
-  },
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    borderRadius: 16,
-    padding: 20,
-    width: '100%',
-    maxWidth: 400,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    padding: 4,
-  },
-  userDetails: {
-    gap: 12,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  detailValue: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  modalActions: {
-    marginTop: 20,
-  },
-  modalButton: {
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

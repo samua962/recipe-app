@@ -12,6 +12,7 @@ import {
   RefreshControl,
   Modal,
   Animated,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -419,6 +420,35 @@ export default function UserProfileScreen() {
     }
   };
 
+  // RENDER RECIPE CARD FOR GRID VIEW
+  const renderRecipeCard = ({ item }) => (
+    <TouchableOpacity 
+      style={[styles.recipeCard, { backgroundColor: colors.card }]}
+      onPress={() => navigation.navigate("RecipeDetail", { recipe: item })}
+    >
+      {item.imageURL || item.imageBase64 ? (
+        <Image 
+          source={getImageSource(item)} 
+          style={styles.recipeImage}
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[styles.recipeImagePlaceholder, { backgroundColor: colors.primary + '20' }]}>
+          <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
+        </View>
+      )}
+      <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={2}>
+        {getLocalizedTitle(item)}
+      </Text>
+      <View style={styles.recipeMeta}>
+        <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+        <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
+          {item.cookingTime || '?'} {t('recipe.minutes')}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+
   // UNFOLLOW DIALOG COMPONENT
   const UnfollowDialog = () => {
     const translateY = dialogAnimation.interpolate({
@@ -430,7 +460,9 @@ export default function UserProfileScreen() {
       inputRange: [0, 1],
       outputRange: [0, 1],
     });
-  const userName = userData?.name || userData?.email?.split("@")[0] || t('profile.defaultName');
+    
+    const userName = userData?.name || userData?.email?.split("@")[0] || t('profile.defaultName');
+    
     return (
       <Modal
         visible={showUnfollowDialog}
@@ -685,7 +717,6 @@ export default function UserProfileScreen() {
           >
             <Text style={[styles.statNumber, { color: colors.text }]}>{followersCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.followers')}</Text>
-           
           </TouchableOpacity>
           
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -697,7 +728,6 @@ export default function UserProfileScreen() {
           >
             <Text style={[styles.statNumber, { color: colors.text }]}>{followingCount}</Text>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('profile.following')}</Text>
-          
           </TouchableOpacity>
           
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
@@ -709,11 +739,24 @@ export default function UserProfileScreen() {
         </View>
       </View>
 
-      {/* User's Recipes Section */}
+      {/* User's Recipes Section - UPDATED TO VERTICAL 2-COLUMN GRID */}
       <View style={styles.recipesSection}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          {isCurrentUser ? t('profile.myRecipes') : t('profile.userRecipes')} ({userRecipes.length})
-        </Text>
+        <View style={styles.sectionHeader}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {isCurrentUser ? t('profile.myRecipes') : t('profile.userRecipes')} ({userRecipes.length})
+          </Text>
+          
+          {userRecipes.length > 0 && (
+            <TouchableOpacity 
+              style={styles.viewAllButton}
+              onPress={() => navigation.navigate("UserRecipesList", { userId, userName: userData?.name })}
+            >
+              <Text style={[styles.viewAllText, { color: colors.primary }]}>
+                {t('profile.viewAllRecipes')}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
         
         {loadingRecipes ? (
           <ActivityIndicator size="small" color={colors.primary} style={styles.recipesLoading} />
@@ -725,68 +768,17 @@ export default function UserProfileScreen() {
             </Text>
           </View>
         ) : (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.recipesScroll}
-            contentContainerStyle={styles.recipesContainer}
-          >
-            {userRecipes.slice(0, 10).map((recipe) => (
-              <TouchableOpacity 
-                key={recipe.id}
-                style={[styles.recipeCard, { backgroundColor: colors.card }]}
-                onPress={() => navigation.navigate("RecipeDetail", { recipe })}
-              >
-                {recipe.imageURL || recipe.imageBase64 ? (
-                  <Image 
-                    source={getImageSource(recipe)} 
-                    style={styles.recipeImage}
-                    resizeMode="cover"
-                  />
-                ) : (
-                  <View style={[styles.recipeImagePlaceholder, { backgroundColor: colors.primary + '20' }]}>
-                    <Ionicons name="restaurant-outline" size={30} color={colors.primary} />
-                  </View>
-                )}
-                <Text style={[styles.recipeTitle, { color: colors.text }]} numberOfLines={2}>
-                  {getLocalizedTitle(recipe)}
-                </Text>
-                <View style={styles.recipeMeta}>
-                  <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
-                  <Text style={[styles.recipeMetaText, { color: colors.textSecondary }]}>
-                    {recipe.cookingTime || '?'} {t('recipe.minutes')}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <FlatList
+            data={userRecipes}
+            renderItem={renderRecipeCard}
+            keyExtractor={(item) => item.id}
+            numColumns={2}
+            scrollEnabled={false}
+            contentContainerStyle={styles.recipesGrid}
+            columnWrapperStyle={styles.recipeRow}
+            showsVerticalScrollIndicator={false}
+          />
         )}
-      </View>
-
-      {/* View All Recipes Button */}
-      {userRecipes.length > 10 && (
-        <TouchableOpacity 
-          style={[styles.viewAllButton, { backgroundColor: colors.card }]}
-          onPress={() => navigation.navigate("UserRecipesList", { userId, userName: userData?.name })}
-        >
-          <Text style={[styles.viewAllText, { color: colors.primary }]}>
-            {t('profile.viewAllRecipes')} ({userRecipes.length})
-          </Text>
-          <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-        </TouchableOpacity>
-      )}
-
-      {/* Recent Activity (Optional) */}
-      <View style={[styles.activitySection, { backgroundColor: colors.card }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>
-          {t('profile.recentActivity')}
-        </Text>
-        <View style={styles.noActivity}>
-          <Ionicons name="time-outline" size={40} color={colors.border} />
-          <Text style={[styles.noActivityText, { color: colors.textSecondary }]}>
-            {t('profile.noActivity')}
-          </Text>
-        </View>
       </View>
 
       {/* Unfollow Dialog */}
@@ -980,21 +972,31 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 12,
   },
-  statArrow: {
-    marginTop: 2,
-  },
   statDivider: {
     width: 1,
     height: 30,
   },
   recipesSection: {
     marginHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 30,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 16,
+  },
+  viewAllButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  viewAllText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   recipesLoading: {
     marginVertical: 20,
@@ -1002,93 +1004,59 @@ const styles = StyleSheet.create({
   noRecipes: {
     alignItems: "center",
     paddingVertical: 40,
+    paddingHorizontal: 20,
   },
   noRecipesText: {
     marginTop: 12,
     fontSize: 14,
+    textAlign: "center",
   },
-  recipesScroll: {
-    marginHorizontal: -4,
+  recipesGrid: {
+    paddingBottom: 20,
   },
-  recipesContainer: {
-    paddingHorizontal: 4,
+  recipeRow: {
+    justifyContent: "space-between",
+    marginBottom: 15,
   },
   recipeCard: {
-    width: 150,
-    marginRight: 12,
-    borderRadius: 8,
-    padding: 12,
+    width: (width - 40) / 2,
+    borderRadius: 12,
+    overflow: "hidden",
+    marginBottom: 15,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   recipeImage: {
     width: "100%",
-    height: 100,
-    borderRadius: 6,
-    marginBottom: 8,
+    height: 120,
   },
   recipeImagePlaceholder: {
     width: "100%",
-    height: 100,
-    borderRadius: 6,
-    marginBottom: 8,
+    height: 120,
     justifyContent: "center",
     alignItems: "center",
   },
   recipeTitle: {
     fontSize: 14,
     fontWeight: "600",
-    marginBottom: 4,
+    marginBottom: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
     height: 36,
+    lineHeight: 18,
   },
   recipeMeta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
   },
   recipeMetaText: {
     fontSize: 11,
-  },
-  viewAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginHorizontal: 16,
-    marginBottom: 20,
-    padding: 16,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginRight: 4,
-  },
-  activitySection: {
-    marginHorizontal: 16,
-    marginBottom: 30,
-    padding: 20,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  noActivity: {
-    alignItems: "center",
-    paddingVertical: 30,
-  },
-  noActivityText: {
-    marginTop: 8,
-    fontSize: 14,
   },
   // Dialog styles
   dialogOverlay: {

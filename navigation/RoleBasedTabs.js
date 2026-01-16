@@ -136,7 +136,7 @@ export function UserTabs() {
       />
       <Tab.Screen 
         name="Profile" 
-        component={CurrentUserProfileScreen} // CHANGED: From ProfileScreen to CurrentUserProfileScreen
+        component={CurrentUserProfileScreen} 
         options={{
           tabBarLabel: t('tabs.profile'),
         }}

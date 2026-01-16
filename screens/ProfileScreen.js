@@ -1,3 +1,4 @@
+
 // screens/ProfileScreen.js - UPDATED FOR GUEST USERS
 import React, { useState, useEffect } from "react";
 import {
@@ -12,6 +13,7 @@ import {
   Image,
   ScrollView,
   Alert,
+  Linking,
 } from "react-native";
 import { signOut } from "firebase/auth";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
@@ -20,7 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useTheme } from "../contexts/ThemeContext";
 import LanguageSwitcher from "../components/LanguageSwitcher";
-import { useGuest } from "../contexts/GuestContext"; // ADD THIS
+import { useGuest } from "../contexts/GuestContext";
 
 const { width, height } = Dimensions.get("window");
 
@@ -29,20 +31,19 @@ export default function ProfileScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [logoutLoading, setLogoutLoading] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
-  const [showGuestDialog, setShowGuestDialog] = useState(false); // ADD THIS
   const [dialogAnimation] = useState(new Animated.Value(0));
   const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   const { locale, t } = useLanguage();
   const { colors, isDarkMode, toggleTheme } = useTheme();
-  const { isGuest, clearGuest } = useGuest(); // ADD THIS
+  const { isGuest, clearGuest } = useGuest();
 
   useEffect(() => {
     if (!isGuest) {
       loadUserData();
       loadUnreadNotifications();
     } else {
-      setLoading(false); // For guest, no need to load user data
+      setLoading(false);
     }
   }, [isGuest]);
 
@@ -94,7 +95,6 @@ export default function ProfileScreen({ navigation, route }) {
     }
   };
 
-  // Show guest restriction dialog
   const showGuestRestrictionDialog = (featureName) => {
     Alert.alert(
       t('profile.guest.restrictedTitle') || "Feature Restricted",
@@ -109,7 +109,6 @@ export default function ProfileScreen({ navigation, route }) {
     );
   };
 
-  // Handle button presses for guest users
   const handleGuestButtonPress = (featureName) => {
     if (isGuest) {
       showGuestRestrictionDialog(featureName);
@@ -118,37 +117,36 @@ export default function ProfileScreen({ navigation, route }) {
     return true;
   };
 
-  // Handle edit profile
   const handleEditProfile = () => {
     if (!handleGuestButtonPress(t('profile.editProfile') || "Edit Profile")) return;
     navigation.navigate("EditProfile", { userData });
   };
 
-  // Handle notifications
   const handleNotifications = () => {
     if (!handleGuestButtonPress(t('profile.notifications') || "Notifications")) return;
     navigation.navigate("Notifications");
   };
 
-  // Handle my recipes
   const handleMyRecipes = () => {
     if (!handleGuestButtonPress(t('profile.myRecipes') || "My Recipes")) return;
     navigation.navigate("MyRecipes");
   };
 
-  // Handle help & support
+  // UPDATED: Handle help & support - opens email instead of navigating to a screen
   const handleHelpSupport = () => {
-    if (!handleGuestButtonPress(t('profile.helpSupport') || "Help & Support")) return;
-    navigation.navigate("HelpSupport");
+    if (isGuest) {
+      showGuestRestrictionDialog(t('profile.helpSupport') || "Help & Support");
+      return;
+    }
+    
+    // Open email client with pre-filled subject
+    Linking.openURL('mailto:support@recipeapp.com?subject=Recipe App Support Request');
   };
 
-  // Handle about
   const handleAbout = () => {
-    // About is allowed for guest users
     navigation.navigate("About");
   };
 
-  // Handle view public profile
   const handleViewPublicProfile = () => {
     if (isGuest) {
       showGuestRestrictionDialog(t('profile.viewPublicProfile') || "Public Profile");
@@ -161,10 +159,8 @@ export default function ProfileScreen({ navigation, route }) {
     }
   };
 
-  // Show custom logout dialog
   const showCustomLogoutDialog = () => {
     if (isGuest) {
-      // For guest, show different dialog
       Alert.alert(
         t('profile.guest.exitGuestMode') || "Exit Guest Mode",
         t('profile.guest.exitMessage') || "Do you want to exit guest mode and go to login?",
@@ -188,7 +184,6 @@ export default function ProfileScreen({ navigation, route }) {
     }).start();
   };
 
-  // Hide custom logout dialog
   const hideCustomLogoutDialog = () => {
     Animated.timing(dialogAnimation, {
       toValue: 0,
@@ -199,21 +194,18 @@ export default function ProfileScreen({ navigation, route }) {
     });
   };
 
-  // Handle logout confirmation
   const handleLogoutConfirm = () => {
     hideCustomLogoutDialog();
     performLogout();
   };
 
-  // Handle guest logout (exit guest mode)
+  // UPDATED: Simple guest logout without notifications
   const handleGuestLogout = async () => {
     setLogoutLoading(true);
     try {
-      // Clear guest status
       await clearGuest();
       console.log("Guest mode exited");
       
-      // Navigate to Login
       navigation.reset({
         index: 0,
         routes: [{ name: "Login" }],
@@ -227,14 +219,13 @@ export default function ProfileScreen({ navigation, route }) {
     }
   };
 
-  // Separate logout function with loading state
+  // UPDATED: Simple logout function without notifications
   const performLogout = async () => {
     setLogoutLoading(true);
     try {
       await signOut(auth);
       console.log("Logout successful");
       
-      // Clear navigation stack completely
       navigation.reset({
         index: 0,
         routes: [{ name: "Login" }],
@@ -252,7 +243,7 @@ export default function ProfileScreen({ navigation, route }) {
       case "admin": return "#ff6b6b";
       case "moderator": return "#4ecdc4";
       case "user": return "#45b7d1";
-      case "guest": return "#95a5a6"; // ADD GUEST COLOR
+      case "guest": return "#95a5a6";
       default: return "#95a5a6";
     }
   };
@@ -262,7 +253,7 @@ export default function ProfileScreen({ navigation, route }) {
       case "admin": return "shield";
       case "moderator": return "shield-checkmark";
       case "user": return "person";
-      case "guest": return "person-outline"; // ADD GUEST ICON
+      case "guest": return "person-outline";
       default: return "help";
     }
   };
@@ -271,12 +262,10 @@ export default function ProfileScreen({ navigation, route }) {
     return t(`profile.roles.${role}`) || role;
   };
 
-  // Handle back button press
   const handleBackPress = () => {
     navigation.goBack();
   };
 
-  // Custom Dialog Component
   const LogoutDialog = () => {
     const translateY = dialogAnimation.interpolate({
       inputRange: [0, 1],
@@ -349,7 +338,6 @@ export default function ProfileScreen({ navigation, route }) {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Custom Header with Back Button */}
       <View style={[styles.customHeader, { backgroundColor: colors.card }]}>
         <TouchableOpacity 
           style={styles.backButton}
@@ -375,7 +363,6 @@ export default function ProfileScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Profile Info Card */}
         <View style={[styles.profileCard, { backgroundColor: colors.card }]}>
           <View style={styles.avatarContainer}>
             {!isGuest && userData?.profilePhoto ? (
@@ -395,7 +382,6 @@ export default function ProfileScreen({ navigation, route }) {
               </View>
             )}
             
-            {/* Edit Icon Button - HIDDEN FOR GUEST */}
             {!isGuest && (
               <TouchableOpacity 
                 style={[styles.editIconButton, { backgroundColor: colors.primary }]}
@@ -417,7 +403,6 @@ export default function ProfileScreen({ navigation, route }) {
               : auth.currentUser?.email}
           </Text>
           
-          {/* Role Badge */}
           <View style={[styles.roleBadge, { 
             backgroundColor: isGuest ? getRoleColor("guest") : getRoleColor(userData?.role || "user") 
           }]}>
@@ -433,7 +418,6 @@ export default function ProfileScreen({ navigation, route }) {
             </Text>
           </View>
           
-          {/* View Public Profile Button - HIDDEN FOR GUEST */}
           {!isGuest && (
             <TouchableOpacity 
               style={[styles.viewPublicProfileButton, { borderColor: colors.primary }]}
@@ -446,7 +430,6 @@ export default function ProfileScreen({ navigation, route }) {
             </TouchableOpacity>
           )}
           
-          {/* Guest Info Message */}
           {isGuest && (
             <View style={[styles.guestInfoBox, { backgroundColor: 'rgba(149, 165, 166, 0.1)' }]}>
               <Ionicons name="information-circle-outline" size={20} color="#95a5a6" />
@@ -457,9 +440,7 @@ export default function ProfileScreen({ navigation, route }) {
           )}
         </View>
 
-        {/* Menu Items */}
         <View style={[styles.menu, { backgroundColor: colors.card }]}>
-          {/* Dark Mode Toggle - ALLOWED FOR GUEST */}
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={toggleTheme}
@@ -480,7 +461,6 @@ export default function ProfileScreen({ navigation, route }) {
             </View>
           </TouchableOpacity>
 
-          {/* Language Switcher - ALLOWED FOR GUEST */}
           <View style={styles.menuItem}>
             <Ionicons name="language-outline" size={24} color={colors.textSecondary} />
             <Text style={[styles.menuText, { color: colors.text }]}>
@@ -489,97 +469,92 @@ export default function ProfileScreen({ navigation, route }) {
             <LanguageSwitcher />
           </View>
 
-          {/* Notifications with Badge - RESTRICTED FOR GUEST */}
-        <TouchableOpacity 
-  style={styles.menuItem}
-  onPress={handleNotifications}
-  disabled={isGuest}
->
-  <View style={styles.notificationIconContainer}>
-    <Ionicons 
-      name="notifications-outline" 
-      size={24} 
-      color={isGuest ? colors.textDisabled : colors.textSecondary} 
-    />
-    {!isGuest && unreadNotifications > 0 && (
-      <View style={styles.notificationBadge}>
-        <Text style={styles.notificationBadgeText}>
-          {unreadNotifications > 99 ? "99+" : unreadNotifications}
-        </Text>
-      </View>
-    )}
-  </View>
-  <Text style={[styles.menuText, { 
-    color: isGuest ? colors.textDisabled : colors.text 
-  }]}>
-    {t("profile.notifications")}
-  </Text>
-  <View style={styles.notificationRight}>
-    {!isGuest && unreadNotifications > 0 && (
-      <Text style={[styles.unreadCount, { color: colors.primary }]}>
-        {unreadNotifications} {t("profile.unread")}
-      </Text>
-    )}
-    <Ionicons 
-      name="chevron-forward" 
-      size={20} 
-      color={isGuest ? colors.textDisabled : colors.textSecondary} 
-    />
-  </View>
-</TouchableOpacity>
-
-
-         {/* My Recipes - RESTRICTED FOR GUEST */}
-<TouchableOpacity 
-  style={styles.menuItem}
- onPress={() => navigation.navigate('MyRecipes')}
-  disabled={isGuest}
->
-  <Ionicons 
-    name="restaurant-outline" 
-    size={24} 
-    color={isGuest ? colors.textDisabled : colors.textSecondary} 
-  />
-  <Text style={[styles.menuText, { 
-    color: isGuest ? colors.textDisabled : colors.text 
-  }]}>
-    {t("profile.myRecipes")}
-  </Text>
-  <Ionicons 
-    name="chevron-forward" 
-    size={20} 
-    color={isGuest ? colors.textDisabled : colors.textSecondary} 
-  />
-</TouchableOpacity>
-
-          {/* Help & Support - RESTRICTED FOR GUEST */}
-<TouchableOpacity 
-  style={styles.menuItem}
-  onPress={handleHelpSupport}
-  disabled={isGuest}
->
-  <Ionicons 
-    name="help-circle-outline" 
-    size={24} 
-    color={isGuest ? colors.textDisabled : colors.textSecondary} 
-  />
-  <Text style={[styles.menuText, { 
-    color: isGuest ? colors.textDisabled : colors.text 
-  }]}>
-    {t("profile.helpSupport")}
-  </Text>
-  <Ionicons 
-    name="chevron-forward" 
-    size={20} 
-    color={isGuest ? colors.textDisabled : colors.textSecondary} 
-  />
-</TouchableOpacity>
-
-          {/* About App - ALLOWED FOR GUEST */}
           <TouchableOpacity 
             style={styles.menuItem}
-              onPress={() => navigation.navigate('About')}
+            onPress={handleNotifications}
+            disabled={isGuest}
+          >
+            <View style={styles.notificationIconContainer}>
+              <Ionicons 
+                name="notifications-outline" 
+                size={24} 
+                color={isGuest ? colors.textDisabled : colors.textSecondary} 
+              />
+              {!isGuest && unreadNotifications > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadNotifications > 99 ? "99+" : unreadNotifications}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.menuText, { 
+              color: isGuest ? colors.textDisabled : colors.text 
+            }]}>
+              {t("profile.notifications")}
+            </Text>
+            <View style={styles.notificationRight}>
+              {!isGuest && unreadNotifications > 0 && (
+                <Text style={[styles.unreadCount, { color: colors.primary }]}>
+                  {unreadNotifications} {t("profile.unread")}
+                </Text>
+              )}
+              <Ionicons 
+                name="chevron-forward" 
+                size={20} 
+                color={isGuest ? colors.textDisabled : colors.textSecondary} 
+              />
+            </View>
+          </TouchableOpacity>
 
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={handleMyRecipes}
+            disabled={isGuest}
+          >
+            <Ionicons 
+              name="restaurant-outline" 
+              size={24} 
+              color={isGuest ? colors.textDisabled : colors.textSecondary} 
+            />
+            <Text style={[styles.menuText, { 
+              color: isGuest ? colors.textDisabled : colors.text 
+            }]}>
+              {t("profile.myRecipes")}
+            </Text>
+            <Ionicons 
+              name="chevron-forward" 
+              size={20} 
+              color={isGuest ? colors.textDisabled : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+
+          {/* UPDATED: Help & Support - Opens email */}
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={handleHelpSupport}
+            disabled={isGuest}
+          >
+            <Ionicons 
+              name="help-circle-outline" 
+              size={24} 
+              color={isGuest ? colors.textDisabled : colors.textSecondary} 
+            />
+            <Text style={[styles.menuText, { 
+              color: isGuest ? colors.textDisabled : colors.text 
+            }]}>
+              {t("profile.helpSupport")}
+            </Text>
+            <Ionicons 
+              name="chevron-forward" 
+              size={20} 
+              color={isGuest ? colors.textDisabled : colors.textSecondary} 
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={handleAbout}
           >
             <Ionicons name="information-circle-outline" size={24} color={colors.textSecondary} />
             <Text style={[styles.menuText, { color: colors.text }]}>
@@ -588,10 +563,8 @@ export default function ProfileScreen({ navigation, route }) {
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          {/* Divider before logout */}
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
-          {/* Logout/Exit Guest Mode Button */}
           <TouchableOpacity 
             style={[
               styles.logoutButton, 
@@ -635,7 +608,6 @@ export default function ProfileScreen({ navigation, route }) {
           </TouchableOpacity>
         </View>
 
-        {/* App Version */}
         <View style={styles.footer}>
           <Text style={[styles.versionText, { color: colors.textSecondary }]}>
             {t("profile.version")} 1.0.0
@@ -643,7 +615,6 @@ export default function ProfileScreen({ navigation, route }) {
         </View>
       </ScrollView>
 
-      {/* Custom Logout Dialog */}
       <LogoutDialog />
     </View>
   );
@@ -653,7 +624,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  // Custom Header Styles
   customHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -667,7 +637,6 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: -8,
-    
   },
   headerTitle: {
     fontSize: 18,
@@ -819,7 +788,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginRight: 4,
   },
-  // Notification Styles
   notificationIconContainer: {
     position: "relative",
   },
@@ -876,7 +844,6 @@ const styles = StyleSheet.create({
   },
   logoutText: {
     fontSize: 16,
-    color: "#e74c3c",
     fontWeight: "600",
   },
   logoutSubtext: {
@@ -892,7 +859,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "500",
   },
-  // Custom Dialog Styles
   dialogOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
@@ -959,7 +925,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#fff",
   },
-   guestInfoBox: {
+  guestInfoBox: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,

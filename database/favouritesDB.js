@@ -4,11 +4,11 @@ import { openDatabaseAsync } from "expo-sqlite";
 let db = null;
 
 export const initDatabase = async () => {
-  if (db) return; // ✅ Already initialized
+  if (db) return; //  Already initialized
 
   try {
     db = await openDatabaseAsync("favourites.db");
-    console.log("✅ Database opened successfully");
+    console.log(" Database opened successfully");
 
     await db.execAsync(`
       CREATE TABLE IF NOT EXISTS favourites (
@@ -22,16 +22,16 @@ export const initDatabase = async () => {
       );
     `);
     
-    console.log("✅ Table ensured");
+    console.log(" Table ensured");
   } catch (error) {
-    console.error("❌ Database init error:", error);
+    console.error(" Database init error:", error);
     throw error;
   }
 };
 
 export const addFavourite = async (recipe) => {
   if (!db) {
-    console.warn("⚠️ Database not initialized. Initializing now...");
+    console.warn(" Database not initialized. Initializing now...");
     await initDatabase();
   }
 
@@ -50,10 +50,10 @@ export const addFavourite = async (recipe) => {
         recipe.videoURL || "",
       ]
     );
-    console.log("✅ Favourite added:", recipe.id);
+    console.log(" Favourite added:", recipe.id);
     return { success: true };
   } catch (error) {
-    console.error("❌ Error adding favourite:", error);
+    console.error(" Error adding favourite:", error);
     throw error;
   }
 };
@@ -65,10 +65,10 @@ export const removeFavourite = async (id) => {
 
   try {
     await db.runAsync("DELETE FROM favourites WHERE id = ?;", [id]);
-    console.log("✅ Favourite removed:", id);
+    console.log(" Favourite removed:", id);
     return { success: true };
   } catch (error) {
-    console.error("❌ Error removing favourite:", error);
+    console.error(" Error removing favourite:", error);
     throw error;
   }
 };
@@ -85,7 +85,7 @@ export const isFavourite = async (id) => {
     );
     return result !== null;
   } catch (error) {
-    console.error("❌ Error checking favourite:", error);
+    console.error(" Error checking favourite:", error);
     throw error;
   }
 };
@@ -99,7 +99,7 @@ export const getFavourites = async () => {
     const result = await db.getAllAsync("SELECT * FROM favourites;");
     return result || [];
   } catch (error) {
-    console.error("❌ Error getting favourites:", error);
+    console.error(" Error getting favourites:", error);
     throw error;
   }
 };
@@ -111,10 +111,10 @@ export const clearAllFavourites = async () => {
 
   try {
     await db.runAsync("DELETE FROM favourites;");
-    console.log("✅ All favourites cleared");
+    console.log(" All favourites cleared");
     return { success: true };
   } catch (error) {
-    console.error("❌ Error clearing favourites:", error);
+    console.error(" Error clearing favourites:", error);
     throw error;
   }
 };
