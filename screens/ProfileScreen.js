@@ -356,6 +356,7 @@ export default function ProfileScreen({ navigation, route }) {
             <Ionicons name="person-outline" size={24} color={colors.primary} />
           </TouchableOpacity>
         )}
+        
       </View>
 
       <ScrollView 
@@ -441,6 +442,18 @@ export default function ProfileScreen({ navigation, route }) {
         </View>
 
         <View style={[styles.menu, { backgroundColor: colors.card }]}>
+          <TouchableOpacity 
+  style={styles.menuItem}
+  onPress={() => navigation.navigate('NotificationPreferences')}
+>
+  <View style={styles.menuLeft}>
+    <Ionicons name="notifications-outline" size={24} color={colors.text} />
+    <Text style={[styles.menuText, { color: colors.text }]}>
+      Notification Preferences
+    </Text>
+  </View>
+  <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+</TouchableOpacity>
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={toggleTheme}

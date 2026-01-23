@@ -1,4 +1,4 @@
-// services/notificationService.js - FULLY UPDATED
+// services/notificationService.js - FULLY UPDATED WITH PUSH NOTIFICATIONS DISABLED
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform, LogBox } from 'react-native';
@@ -23,46 +23,111 @@ Notifications.setNotificationHandler({
   }),
 });
 
+// ==================== USER PREFERENCES CLASS ====================
+export class UserPreferences {
+  static defaultPreferences = {
+    newRecipesFromFollowed: true,
+    recipeApproved: true,
+    recipeRejected: true,
+    newComments: true,
+    newRatings: true,
+    moderationAlerts: true,
+    allNotifications: true, // master switch
+  };
+
+  // Save user preferences
+  static async saveUserPreferences(userId, preferences) {
+    try {
+      await setDoc(doc(db, 'userPreferences', userId), {
+        ...this.defaultPreferences,
+        ...preferences,
+        updatedAt: new Date(),
+      }, { merge: true });
+      console.log('✅ User preferences saved for:', userId);
+      return true;
+    } catch (error) {
+      console.error('❌ Error saving user preferences:', error);
+      // Just log the error but don't break the app
+      return false;
+    }
+  }
+
+  // Get user preferences
+  static async getUserPreferences(userId) {
+    try {
+      const docRef = doc(db, 'userPreferences', userId);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return { ...this.defaultPreferences, ...docSnap.data() };
+      } else {
+        // Return defaults without trying to create (permissions issue)
+        console.log('ℹ️ No preferences found for user:', userId, '- Returning defaults');
+        return this.defaultPreferences;
+      }
+    } catch (error) {
+      console.error('❌ Error getting user preferences:', error);
+      // Return defaults on error (including permission errors)
+      return this.defaultPreferences;
+    }
+  }
+
+  // Check if user wants specific notification type
+  static async shouldSendNotification(userId, notificationType) {
+    try {
+      const preferences = await this.getUserPreferences(userId);
+      
+      // Master switch check
+      if (!preferences.allNotifications) {
+        console.log(`🔕 Master switch OFF for user: ${userId}`);
+        return false;
+      }
+      
+      switch (notificationType) {
+        case 'new_recipe_followed':
+          return preferences.newRecipesFromFollowed;
+        case 'recipe_review_approved':
+          return preferences.recipeApproved;
+        case 'recipe_review_rejected':
+          return preferences.recipeRejected;
+        case 'new_comment':
+          return preferences.newComments;
+        case 'new_rating':
+          return preferences.newRatings;
+        case 'new_recipe_moderation':
+          return preferences.moderationAlerts;
+        default:
+          console.log(`ℹ️ Unknown notification type: ${notificationType}, defaulting to true`);
+          return true;
+      }
+    } catch (error) {
+      console.error('❌ Error checking notification preference:', error);
+      return true; // Default to sending if error
+    }
+  }
+
+  // Get preference label
+  static getPreferenceLabel(key) {
+    const labels = {
+      newRecipesFromFollowed: 'New Recipes from Followed Users',
+      recipeApproved: 'Recipe Approved Notifications',
+      recipeRejected: 'Recipe Rejected Notifications',
+      newComments: 'New Comment Notifications',
+      newRatings: 'New Rating Notifications',
+      moderationAlerts: 'Moderation Alerts',
+      allNotifications: 'All Notifications'
+    };
+    return labels[key] || key;
+  }
+}
+
+// ==================== NOTIFICATION SERVICE CLASS ====================
 export class NotificationService {
+  // ==================== MODIFIED: COMPLETELY DISABLE PUSH NOTIFICATIONS ====================
   static async registerForPushNotificationsAsync() {
-    // Skip push notifications entirely in Expo Go
-    if (isExpoGo) {
-      console.log('🔕 Expo Go: Using local notifications only');
-      return null;
-    }
-    
-    let token;
-    
-    if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-      
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-      
-      if (finalStatus !== 'granted') {
-        console.log('Failed to get push token for push notification!');
-        return null;
-      }
-      
-      token = (await Notifications.getExpoPushTokenAsync()).data;
-      console.log('📱 Push token obtained:', token);
-    } else {
-      console.log('Must use physical device for Push Notifications');
-    }
-
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
-    }
-
-    return token;
+    // COMPLETELY DISABLE push notifications
+    console.log('🔕 Push notifications are disabled on the phone');
+    return null;
   }
 
   static async saveTokenToFirestore(userId, token) {
@@ -70,54 +135,29 @@ export class NotificationService {
       await setDoc(doc(db, 'users', userId), {
         expoPushToken: token,
       }, { merge: true });
-      console.log('Push token saved to Firestore');
+      console.log('Push token saved to Firestore (not used since push is disabled)');
     } catch (error) {
       console.error('Error saving push token:', error);
     }
   }
 
+  // ==================== MODIFIED: DISABLE PUSH, USE LOCAL ONLY ====================
   static async sendPushNotification(expoPushToken, title, body, data = {}) {
-    // Skip actual push in Expo Go
-    if (isExpoGo) {
-      console.log(`🔕 Expo Go: Local notification - ${title}: ${body}`);
-      // Fall back to local notification
-      await this.showLocalNotification(title, body, data);
-      return;
-    }
-
-    if (!expoPushToken) {
-      console.log('No push token available, using local notification');
-      await this.showLocalNotification(title, body, data);
-      return;
-    }
-
-    const message = {
-      to: expoPushToken,
-      sound: 'default',
-      title: title,
-      body: body,
-      data: data,
-    };
-
-    try {
-      await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      });
-      console.log('✅ Push notification sent successfully');
-    } catch (error) {
-      console.error('Error sending push notification, falling back to local:', error);
-      await this.showLocalNotification(title, body, data);
-    }
+    // COMPLETELY DISABLE push notifications
+    console.log(`🔕 Push notifications disabled: ${title}: ${body}`);
+    // Only show local notifications
+    await this.showLocalNotification(title, body, data);
+    return;
   }
 
   static async storeNotificationInFirestore(notificationData) {
     try {
+      // Check if we have the required permission (user ID exists)
+      if (!notificationData.userId) {
+        console.log('⚠️ No userId provided for notification');
+        return;
+      }
+      
       const finalData = {
         ...notificationData,
         createdBy: auth.currentUser?.uid || 'system',
@@ -128,12 +168,12 @@ export class NotificationService {
       await addDoc(collection(db, 'notifications'), finalData);
       console.log('💾 Notification stored in Firestore for user:', notificationData.userId);
     } catch (error) {
-      console.error('Error storing notification in Firestore:', error);
+      console.error('❌ Error storing notification in Firestore:', error);
       // Don't throw - this shouldn't break the main functionality
     }
   }
 
-  // Show local notification (works in Expo Go)
+  // Show local notification (works without push)
   static async showLocalNotification(title, body, data = {}) {
     try {
       await Notifications.scheduleNotificationAsync({
@@ -161,7 +201,7 @@ export class NotificationService {
 
       console.log(`📨 Notifying AUTHOR ${userId}: ${title}`);
 
-      // Store in Firestore for the AUTHOR
+      // Store in Firestore for the AUTHOR (Firebase functionality remains)
       await this.storeNotificationInFirestore({
         userId: userId, // This is the author's ID
         title: title,
@@ -171,33 +211,11 @@ export class NotificationService {
         recipeTitle: recipeTitle,
       });
 
-      // Show local notification to AUTHOR
+      // Show local notification only (no push)
       await this.showLocalNotification(title, body);
-
-      // Try push notification to AUTHOR (development builds only)
-      if (!isExpoGo) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', userId));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const pushToken = userData.expoPushToken;
-
-            if (pushToken) {
-              await this.sendPushNotification(pushToken, title, body, {
-                type: 'recipe_review',
-                recipeId: userId,
-                action: action,
-              });
-            } else {
-              console.log('No push token found for author, using local notification only');
-            }
-          } else {
-            console.log('Author user document not found');
-          }
-        } catch (userError) {
-          console.log('Could not fetch author data for push notification:', userError.message);
-        }
-      }
+      
+      console.log(`✅ Local notification shown to author: ${userId}`);
+      
     } catch (error) {
       console.error('Error notifying recipe author:', error);
     }
@@ -225,7 +243,7 @@ export class NotificationService {
         });
       }
 
-      // Try to notify moderators (this might fail in Expo Go due to permissions)
+      // Store notifications for moderators in Firebase (without push)
       try {
         const q = query(
           collection(db, 'users'),
@@ -239,9 +257,9 @@ export class NotificationService {
           const user = doc.data();
           const moderatorId = doc.id;
           
-          console.log(`📧 Notifying moderator: ${user.email}`);
+          console.log(`📧 Notifying moderator in Firestore: ${user.email}`);
           
-          // Store in Firestore for each moderator/admin
+          // Store in Firestore only (no push notification)
           this.storeNotificationInFirestore({
             userId: moderatorId, // Moderator's user ID
             title: title,
@@ -250,19 +268,9 @@ export class NotificationService {
             recipeTitle: recipeTitle,
             authorName: authorName,
           });
-
-          // Send push notification if available
-          if (!isExpoGo && user.expoPushToken) {
-            this.sendPushNotification(
-              user.expoPushToken,
-              title,
-              body,
-              { type: 'new_recipe', recipeId: moderatorId }
-            );
-          }
         });
       } catch (moderatorError) {
-        console.log('⚠️ Could not notify all moderators, but recipe was submitted successfully:', moderatorError.message);
+        console.log('⚠️ Could not notify all moderators in Firestore:', moderatorError.message);
         // This is OK - the recipe submission still works!
       }
       
@@ -311,24 +319,7 @@ export class NotificationService {
       });
 
       await this.showLocalNotification(title, body);
-
-      // Push notification for development builds
-      if (!isExpoGo) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', recipeOwnerId));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            if (userData.expoPushToken) {
-              await this.sendPushNotification(userData.expoPushToken, title, body, {
-                type: 'new_comment',
-                recipeTitle: recipeTitle,
-              });
-            }
-          }
-        } catch (error) {
-          console.log('Could not send push notification for comment');
-        }
-      }
+      
     } catch (error) {
       console.error('Error notifying recipe owner about comment:', error);
     }
@@ -353,26 +344,100 @@ export class NotificationService {
       });
 
       await this.showLocalNotification(title, body);
-
-      // Push notification for development builds
-      if (!isExpoGo) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', recipeOwnerId));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            if (userData.expoPushToken) {
-              await this.sendPushNotification(userData.expoPushToken, title, body, {
-                type: 'new_rating',
-                recipeTitle: recipeTitle,
-              });
-            }
-          }
-        } catch (error) {
-          console.log('Could not send push notification for rating');
-        }
-      }
+      
     } catch (error) {
       console.error('Error notifying recipe owner about rating:', error);
+    }
+  }
+
+  // ==================== MODIFIED: NOTIFY FOLLOWERS - LOCAL ONLY ====================
+  static async notifyFollowersNewRecipe(recipeAuthorId, recipeTitle, recipeId) {
+    try {
+      console.log(`📨 Starting to notify followers of: ${recipeAuthorId}`);
+      
+      // 1. Get all followers of this author
+      const followersQuery = query(
+        collection(db, 'followers'),
+        where('followingId', '==', recipeAuthorId)
+      );
+      
+      const followersSnapshot = await getDocs(followersQuery);
+      const followersCount = followersSnapshot.size;
+      console.log(`👥 Found ${followersCount} followers`);
+      
+      if (followersCount === 0) {
+        console.log('ℹ️ No followers to notify');
+        return;
+      }
+      
+      // 2. Get recipe author info
+      let authorName = 'A user';
+      try {
+        const authorDoc = await getDoc(doc(db, 'users', recipeAuthorId));
+        if (authorDoc.exists()) {
+          const authorData = authorDoc.data();
+          authorName = authorData.name || authorData.email?.split('@')[0] || 'A user';
+        }
+      } catch (error) {
+        console.log('⚠️ Could not fetch author name:', error.message);
+      }
+      
+      const title = 'New Recipe from Followed User 🍳';
+      const body = `${authorName} just posted: "${recipeTitle}"`;
+      
+      // 3. Process each follower - LOCAL NOTIFICATIONS ONLY
+      for (const followDoc of followersSnapshot.docs) {
+        const followData = followDoc.data();
+        const followerId = followData.followerId;
+        
+        // Skip invalid follower IDs
+        if (!followerId || followerId === recipeAuthorId) {
+          continue;
+        }
+        
+        try {
+          // Check preference
+          const shouldNotify = await UserPreferences.shouldSendNotification(
+            followerId, 
+            'new_recipe_followed'
+          );
+          
+          if (!shouldNotify) {
+            console.log(`🔕 Skipping ${followerId} (preference disabled)`);
+            continue;
+          }
+          
+          // Store notification in Firestore (Firebase functionality remains)
+          await this.storeNotificationInFirestore({
+            userId: followerId,
+            title: title,
+            body: body,
+            type: 'new_recipe_followed',
+            recipeId: recipeId,
+            authorId: recipeAuthorId,
+            authorName: authorName,
+            recipeTitle: recipeTitle,
+          });
+          
+          // Show local notification only (no push)
+          await this.showLocalNotification(title, body, {
+            type: 'new_recipe_followed',
+            recipeId: recipeId,
+          });
+          
+          console.log(`✅ Local notification sent to follower: ${followerId}`);
+          
+        } catch (followerError) {
+          console.error(`❌ Error processing follower ${followerId}:`, followerError.message);
+          // Continue with other followers
+        }
+      }
+      
+      console.log('✅ Follower notifications completed');
+      
+    } catch (error) {
+      console.error('❌ Error in notifyFollowersNewRecipe:', error);
+      // Don't throw - recipe submission should still succeed
     }
   }
 }

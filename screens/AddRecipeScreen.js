@@ -644,7 +644,6 @@ export default function AddRecipeScreen({ navigation }) {
         encoding: FileSystem.EncodingType.Base64,
       });
       
-
       // Prepare initial recipe data in the input language
       const initialRecipeData = {
         title: {
@@ -699,7 +698,21 @@ export default function AddRecipeScreen({ navigation }) {
       // Save the fully translated recipe to Firestore
       const docRef = await addDoc(collection(db, "recipes"), finalRecipeData);
       
-      console.log('Recipe saved successfully with ID:', docRef.id);
+      console.log('✅ Recipe saved successfully with ID:', docRef.id);
+      
+      // 🔥 NOTIFY FOLLOWERS ABOUT THE NEW RECIPE (LOCAL NOTIFICATIONS ONLY)
+      try {
+        console.log('📨 Starting follower notifications...');
+        await NotificationService.notifyFollowersNewRecipe(
+          user.uid,           // recipe author ID
+          title.trim(),       // recipe title
+          docRef.id           // recipe ID
+        );
+        console.log('✅ Follower notifications completed');
+      } catch (followNotifyError) {
+        console.error('⚠️ Error notifying followers (non-critical):', followNotifyError.message);
+        // Don't block the recipe submission on notification errors
+      }
       
       const targetLanguageName = inputLanguage === 'en' 
         ? t('addRecipe.languageSelector.amharic') 
@@ -713,15 +726,20 @@ export default function AddRecipeScreen({ navigation }) {
         successMessage = t('addRecipe.success.translationPartial').replace('{language}', targetLanguageName);
       }
 
-      // Notify user
+      // Notify user with local notification
       try {
         await NotificationService.notifyCurrentUser(
           t('addRecipe.success.notificationTitle'),
           successMessage,
-          { type: 'recipe_submitted', recipeTitle: title.trim(), recipeId: docRef.id }
+          { 
+            type: 'recipe_submitted', 
+            recipeTitle: title.trim(), 
+            recipeId: docRef.id,
+            recipeData: finalRecipeData
+          }
         );
       } catch (notifyError) {
-        console.error('Error notifying user:', notifyError);
+        console.error('⚠️ Error notifying user:', notifyError);
       }
 
       showCustomDialog(
@@ -737,7 +755,7 @@ export default function AddRecipeScreen({ navigation }) {
       
     } catch (err) {
       setTranslating(false);
-      console.error("Error uploading recipe:", err);
+      console.error("❌ Error uploading recipe:", err);
       console.error("Error details:", err.message);
       showCustomDialog(
         t('addRecipe.errors.uploadTitle'),

@@ -35,6 +35,8 @@ import ProfileScreen from './screens/ProfileScreen';
 import FollowersList from "./screens/FollowersList";
 import AboutScreen from "./screens/AboutScreen";
 import MyRecipesScreen from "./screens/MyRecipesScreen";
+import NotificationPreferencesScreen from './screens/NotificationPreferencesScreen';
+
 
 // Role-based tab navigators
 import { UserTabs, ModeratorTabs, AdminTabs } from "./navigation/RoleBasedTabs";
@@ -207,6 +209,11 @@ function MainAppContent() {
         <Stack.Screen name="FollowersList" component={FollowersList} />
         <Stack.Screen name="About" component={AboutScreen} />
         <Stack.Screen name="MyRecipes" component={MyRecipesScreen} />
+        <Stack.Screen 
+  name="NotificationPreferences" 
+  component={NotificationPreferencesScreen} 
+
+/>
       </Stack.Navigator>
     </NavigationContainer>
   );

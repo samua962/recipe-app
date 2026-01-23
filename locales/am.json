@@ -798,5 +798,25 @@
     "exploreOfflineMessage": "የምግብ ዝግጅቶችን ለመፈለግ የበይነመረብ ግንኙነት ያስፈልጋል። የተቀመጡትን ተወዳጆችዎን ኦፍላይን ማየት ይችላሉ።",
     "noRecipesTitle": "ምንም የምግብ ዝግጅቶች የሉም",
     "noRecipesMessage": "ኦፍላይን ነዎት እና ምንም የምግብ ዝግጅቶች አልተቀመጡም። የተቀመጡ የምግብ ዝግጅቶችን ለማየት ወደ ተወዳጆች ይሂዱ።"
-  }
+  },
+  "notificationPreferences": {
+  "title": "ማሳወቂያ ምርጫዎች",
+  "allNotifications": "ሁሉም ማሳወቂያዎች",
+  "allNotificationsDesc": "ሁሉንም ማሳወቂያዎች በአንድ ጊዜ አብራ/ዝጋ",
+  "categories": "ማሳወቂያ ምድቦች",
+  "newRecipesFromFollowed": "ከተከተሉት ተጠቃሚዎች አዲስ የምግብ ዝግጅት",
+  "newRecipesFromFollowedDesc": "የተከተሉት ሰዎች አዲስ የምግብ ዝግጅት ሲለጥፉ",
+  "recipeApproved": "የምግብ ዝግጅት ተፀድቋል",
+  "recipeApprovedDesc": "የምግብ ዝግጅትዎ ሲፀድቅ",
+  "recipeRejected": "የምግብ ዝግጅት ማሻሻል ያስፈልጋል",
+  "recipeRejectedDesc": "የምግብ ዝግጅትዎ ለማሻሻል ሲፈልግ",
+  "newComments": "አዲስ አስተያየቶች",
+  "newCommentsDesc": "አንድ ሰው በየምግብ ዝግጅትዎ ላይ አስተያየት ሲሰጥ",
+  "newRatings": "አዲስ ደረጃ ምደባ",
+  "newRatingsDesc": "አንድ ሰው በየምግብ ዝግጅትዎ ደረጃ ሲያደርግ",
+  "moderationAlerts": "መመሪያ ማሳወቂያዎች",
+  "moderationAlertsDesc": "ለመመሪያ አዘጋጆች እና አስተዳዳሪዎች ማሳወቂያዎች",
+  "savePreferences": "ምርጫዎችን አስቀምጥ",
+  "info": "ምርጫዎች ለሁለቱም ፑሽ እና በአፕ ውስጥ ማሳወቂያዎች ይሠራሉ"
+}
 }

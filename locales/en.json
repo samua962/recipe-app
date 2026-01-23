@@ -797,7 +797,28 @@
       "title": "Coming Soon",
       "edit": "Edit functionality will be available soon."
     }
-  },"offline": {
+  },
+  "notificationPreferences": {
+  "title": "Notification Preferences",
+  "allNotifications": "All Notifications",
+  "allNotificationsDesc": "Enable or disable all notifications at once",
+  "categories": "Notification Categories",
+  "newRecipesFromFollowed": "New Recipes from Followed Users",
+  "newRecipesFromFollowedDesc": "When people you follow post new recipes",
+  "recipeApproved": "Recipe Approved",
+  "recipeApprovedDesc": "When your recipes are approved",
+  "recipeRejected": "Recipe Needs Modification",
+  "recipeRejectedDesc": "When your recipes need changes",
+  "newComments": "New Comments",
+  "newCommentsDesc": "When someone comments on your recipes",
+  "newRatings": "New Ratings",
+  "newRatingsDesc": "When someone rates your recipes",
+  "moderationAlerts": "Moderation Alerts",
+  "moderationAlertsDesc": "Alerts for moderators and admins",
+  "savePreferences": "Save Preferences",
+  "info": "Preferences apply to both push and in-app notifications"
+},
+"offline": {
     "message": "You're offline. Some features may be limited.",
     "retry": "Retry",
     "goToFavourites": "Go to Favourites",
@@ -807,6 +828,18 @@
     "exploreOfflineMessage": "Explore recipes requires an internet connection. You can view your saved favourites offline.",
     "noRecipesTitle": "No Recipes Available",
     "noRecipesMessage": "You're offline and no recipes are cached. Go to Favourites to view saved recipes."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "loading": "Loading notifications...",
+    "noNotifications": "No notifications",
+    "noNotificationsHint": "When you receive notifications, they will appear here",
+    "clickToViewRecipe": "Click to view recipe",
+    "allMarkedReadTitle": "All notifications marked as read",
+    "allMarkedReadMessage": "All your notifications have been marked as read",
+    "markAllRead": "Mark all as read",
+    "recipeNotFoundTitle": "Recipe Not Found",
+    "recipeNotFoundMessage": "This recipe may have been deleted or is no longer available"
   }
   
   
